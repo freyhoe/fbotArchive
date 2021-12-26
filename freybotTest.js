@@ -1053,9 +1053,11 @@ class Bot{
     do{
       this.iters+=1
       this.root.rollout()
-    //  if(this.iters%50==0)await waitNextTask()
+      if(this.iters%50==0){
+        await waitNextTask()
+      }
     }
-    while(this.iters<300 && calculating)
+    while(this.iters<2000 && calculating)
   }
   newPiece(piece){
     if(this.root.state)this.root.state.queue.push(piece)
