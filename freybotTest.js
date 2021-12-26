@@ -959,7 +959,7 @@ class Node{
   expand(weights = null){
     if(!this.state)return false
     let depth = this.depth+!!this.state.hold
-    if(depth>=this.state.queue.length)return false
+    if(!this.state.queue[depth])return false
     let moves = game.getMoves(this.state,this.state.queue[depth])
     if(this.state.hold)moves = moves.concat(game.getMoves(this.state,this.state.hold))
     else if(this.state.queue[depth+1]){
