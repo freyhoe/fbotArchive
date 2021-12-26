@@ -1112,7 +1112,7 @@ onmessage = function(e){
       bot.loadState(state)
       bot.root.rollout()//ensure at least 1 rollout
       calculating = true
-      bot.think()
+    //  bot.think()
       break
     case "play":
       calculating=false
