@@ -1,4 +1,4 @@
-//const { MessageChannel, parentPort }= require('worker_threads');//for node.js testing only
+null//const { MessageChannel, parentPort }= require('worker_threads');//for node.js testing only
 
 let botSettings = {pathWeight:0, useHold:true}
 let gameSettings = {lineClip:true, rows:40, cols:10}
@@ -800,10 +800,12 @@ class Game{
   }
   scoreState(state, move,depth,weights){
     let score = 0
-    let board = state.board
+    let board = [];
+    for (let i = 0; i < this.rows; i++)
+      board[i] = state.board[i].slice();
     weights = weights || this.weights
     let tCount = 0
-    for(let i = 0; i < 7; i++){
+    for(let i = depth; i < 7+depth; i++){
       if(state.queue[i]){
         if(state.queue[i]=="T")tCount++
       }
@@ -811,6 +813,7 @@ class Game{
         break
       }
     }
+    if(state.hold == "T")tCount++
     let heights = this.getHeights(board)
     if(tCount > 0){
       let out = this.tslot(board,heights,tCount)
@@ -1080,8 +1083,48 @@ class Bot{
 }
 let bot = new Bot()
 let calculating = true
+let state = game.initState()
+let move = {
+    "spin": "mini",
+    "location": {
+        "type": "T",
+        "orientation": "south",
+        "x": 5,
+        "y": 1
+    },
+    "fbot": {
+        "score": 365,
+        "actions": [
+            "sd",
+            "sd",
+            "ccw",
+            "sd",
+            "sd",
+            "180",
+            "sd",
+            "sd",
+            "cw"
+        ],
+        "kick": -1,
+        "attackType": {
+            "clear": 1,
+            "g": 0,
+            "back_to_back": false,
+            "combo": 0
+        }
+    }
+}
+//['I', 'O', 'O', 'T', 'T', 'T', 'Z', 'Z', null, 'J']
+//['I', null, null, null, null, 'Z', 'Z', null, null, null]
 
-
+state.board[0]=['I', 'L', 'L', 'L', null, null, 'S', 'S', 'J', 'J']
+state.board[1]=['I', 'O', 'O', 'L', null, null, null, 'S', 'S', 'J']
+state.board[2]=['I', 'O', 'O', null, null, null, 'Z', 'Z', null, 'J']
+state.board[3]=['I', null, null, null, null, 'Z', 'Z', null, null, null]
+game.printBoard(state.board)
+state = game.advanceState(state,move,0)
+game.printBoard(state.board)
+/*
 function waitNextTask() {
   return new Promise( (resolve) => {
     const channel = waitNextTask.channel || new MessageChannel();
@@ -1152,3 +1195,4 @@ post({
   version: "0.0",
   features: [],
 });
+*/
