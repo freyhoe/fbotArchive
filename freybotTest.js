@@ -1118,7 +1118,7 @@ onmessage = function(e){
       calculating=false
       bot.processMove(data.move)
       calculating = true
-      bot.think()
+  //    bot.think()
       break
     case "suggest":
       console.log(bot.root)
