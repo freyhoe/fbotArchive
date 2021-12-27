@@ -823,7 +823,6 @@ class Game{
       }
       heights = out[2]
     }
-  //  console.log(heights)
     let maxHeight = Math.max(...heights)
     let row_transitions = 0
     for(let y = 0; y<this.rows; y++){
@@ -837,7 +836,6 @@ class Game{
     }
     score+=weights.rowTrans*row_transitions
 
-//console.log(row_transitions)
     let covered = 0;
     let covered2 = 0
     for(let x = 0; x < this.cols; x++){
@@ -851,7 +849,6 @@ class Game{
     }
     score+=weights.covered*covered+weights.covered2*covered2
 
-  //  console.log(covered)
     let cavities = 0
     let overhangs = 0
       for(let y=0; y<maxHeight;y++){
@@ -872,14 +869,12 @@ class Game{
           cavities+=1
         }
       }
-  //    console.log(cavities,overhangs)
     score += cavities * weights.cavities + overhangs*weights.overhangs2
 
     let well = 0
     for(let x = 0; x < this.cols; x++){
       if(heights[x]<=heights[well])well = x
     }
-//console.log(well)
     let depth1 = 0
     loop1:for(let y = heights[well]; y<this.rows; y++){
       for(let x = 0; x < this.cols; x++){
@@ -889,7 +884,6 @@ class Game{
       }
       depth1++
     }
-//    console.log(depth)
     score+=depth1*weights.depth
     if(depth!=0 && weights.well[well])score+=weights.well[well]
     let bumpiness = -1
@@ -903,7 +897,6 @@ class Game{
       bumpiness2+=dh*dh
       prev=i
     }
-  //  console.log(bumpiness)
     score+=weights.bumpiness*bumpiness + weights.bumpiness2*bumpiness2
     score+=maxHeight*weights.height + Math.max(0,maxHeight-15)*weights.quarter + Math.max(0,maxHeight-10)*weights.half
     if(state.back_to_back)score+=weights.b2b
@@ -1080,7 +1073,6 @@ class Bot{
     if(this.thinker)this.thinker.calculating = false
   }
   newPiece(piece){
-  //  console.log(piece)
     if(this.root.state)this.root.state.queue.push(piece)
   }
 
@@ -1118,7 +1110,6 @@ function post(msg){
 }
 onmessage = function(e){
   let data = e.data
-  //console.log(data)
   switch(data.type){
     case "rules":
       post({type:"ready"})
@@ -1127,18 +1118,16 @@ onmessage = function(e){
       let state = {hold:data.hold, queue:data.queue, combo:data.combo, back_to_back:data.back_to_back, board:data.board}
       bot.loadState(state)
       bot.root.rollout()//ensure at least 1 rollout
-      thinker = bot.think()
+      bot.think()
       break
     case "play":
       bot.processMove(data.move)
-      thinker = bot.think()
+      bot.think()
       break
     case "suggest":
-    //  console.log(bot.root)
       if(bot.root.children.length==0){
         console.log("forceRolling")
         bot.root.rollout()
-  //      console.log(bot.root)
       }
       post({
         type:"suggestion",
@@ -1158,7 +1147,7 @@ onmessage = function(e){
   }
 }
 //parentPort.on("message",message=>{
-//  onmessage({data:message})
+  //onmessage({data:message})
 //})
 
 post({
