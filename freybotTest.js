@@ -1,4 +1,4 @@
-null//const { MessageChannel, parentPort }= require('worker_threads');//for node.js testing only
+//const { MessageChannel, parentPort }= require('worker_threads');//for node.js testing only
 
 let botSettings = {pathWeight:0, useHold:true}
 let gameSettings = {lineClip:true, rows:40, cols:10}
@@ -984,7 +984,7 @@ class Node{
     }
 
     if(this.children.length>0){
-  //    this.state = null //this node is no longer a leaf node, we don't need its state using up space
+      this.state = null //this node is no longer a leaf node, we don't need its state using up space
       return true
     }
     else{
@@ -993,7 +993,8 @@ class Node{
   }
   backprop(){
     this.children.sort((a,b)=> (a.value < b.value)?1:-1)
-    this.value = this.value * botSettings.pathWeight + (1-botSettings.pathWeight)*(this.children[0].value + this.children[0].move.fbot.score) //we care about the board in the middle of the path, if we got a bad board in the middle the greater the chance we get killed by a unpredicted spike
+    this.value = this.children[0].value+this.children[0].move.fbot.score
+  //  this.value = this.value * botSettings.pathWeight + (1-botSettings.pathWeight)*(this.children[0].value + this.children[0].move.fbot.score) //we care about the board in the middle of the path, if we got a bad board in the middle the greater the chance we get killed by a unpredicted spike
     if(this.parent){this.parent.backprop()}
   }
   //not sure which selectChild is the best will test out
@@ -1039,11 +1040,28 @@ class Node{
 }
 
 let game = new Game()
+class Thinker{
+  constructor(){
+    this.calculating = true
+    this.iters = 0
+    this.maxIters = 3000
+  }
+  async run(){
+    this.iters=0
+    do{
+      this.iters+=1
+      bot.root.rollout()
+      if(this.iters%50==0){
+        await waitNextTask()
+      }
+    }
+    while(this.iters<this.maxIters && this.calculating)
+  }
+}
 class Bot{
   constructor(){
     this.root = null
-    this.iters = 0
-    this.maxIters = 10000
+    this.thinker = null
   }
   loadState(state){
     this.root = null
@@ -1051,19 +1069,18 @@ class Bot{
     game.cols = state.board[0].length
     this.root = new Node(null,null,state)
   }
-  async think(){
-    this.iters=0
-    do{
-      this.iters+=1
-      this.root.rollout()
-      if(this.iters%50==0){
-        await waitNextTask()
-      }
+  think(){
+    if(this.thinker){
+      this.stopThink()
     }
-    while(this.iters<2000 && calculating)
+    this.thinker = new Thinker()
+    this.thinker.run()
+  }
+  stopThink(){
+    this.thinker.calculating = false
   }
   newPiece(piece){
-    console.log(piece)
+  //  console.log(piece)
     if(this.root.state)this.root.state.queue.push(piece)
   }
 
@@ -1081,8 +1098,9 @@ class Bot{
     //cant find dupe move? shouldnt happen but just in case we load new state
   }
 }
+
+
 let bot = new Bot()
-let calculating = true
 
 function waitNextTask() {
   return new Promise( (resolve) => {
@@ -1096,9 +1114,8 @@ function waitNextTask() {
 
 function post(msg){
   postMessage(msg)
-  //parentPort.postMessage(msg)
+//  parentPort.postMessage(msg)
 }
-
 onmessage = function(e){
   let data = e.data
   //console.log(data)
@@ -1107,22 +1124,19 @@ onmessage = function(e){
       post({type:"ready"})
       break
     case "start":
-      calculating = false
       let state = {hold:data.hold, queue:data.queue, combo:data.combo, back_to_back:data.back_to_back, board:data.board}
       bot.loadState(state)
       bot.root.rollout()//ensure at least 1 rollout
-      calculating = true
-    //  bot.think()
+      thinker = bot.think()
       break
     case "play":
-      calculating=false
       bot.processMove(data.move)
-      calculating = true
-  //    bot.think()
+      thinker = bot.think()
       break
     case "suggest":
-      console.log(bot.root)
+    //  console.log(bot.root)
       if(bot.root.children.length==0){
+        console.log("forceRolling")
         bot.root.rollout()
   //      console.log(bot.root)
       }
@@ -1130,7 +1144,7 @@ onmessage = function(e){
         type:"suggestion",
         moves:bot.root.children.map(x=>x.move),
         move_info:{
-          iters:bot.iters
+          iters:bot.thinker.iters
         }
       })
       break
@@ -1138,13 +1152,13 @@ onmessage = function(e){
       bot.newPiece(data.piece)
       break
     case "stop": case "quit":
-      calculating = false
+      bot.stopThink()
       break
 
   }
 }
 //parentPort.on("message",message=>{
- // onmessage({data:message})
+//  onmessage({data:message})
 //})
 
 post({
