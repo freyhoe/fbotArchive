@@ -1134,11 +1134,13 @@ onmessage = function(e){
         bot.root.rollout()
 
       }
+      let iters = 0
+      if(bot.thinker)iters = bot.thinker.iters
       post({
         type:"suggestion",
         moves:bot.root.children.map(x=>x.move),
         move_info:{
-          iters:bot.thinker.iters
+          iters:iters
         }
       })
       break
