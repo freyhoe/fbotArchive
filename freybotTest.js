@@ -616,7 +616,7 @@ class Game{
     let board = [];
     for (let i = 0; i < this.rows; i++)
       board[i] = state.board[i].slice();
-    return {board:board, hold:state.hold, queue:state.queue, combo:state.combo, back_to_back:state.back_to_back}
+    return {board:board, hold:state.hold, combo:state.combo, back_to_back:state.back_to_back}
   }
 
 
@@ -743,16 +743,16 @@ class Game{
       state.back_to_back = true
     }
     if(move.location.type==state.hold){
-      state.hold = state.queue[depth]
+      state.hold = bot.queue[depth]
     }
-    else if(move.location.type==state.queue[depth]){
+    else if(move.location.type==bot.queue[depth]){
     }
-    else if(state.hold==null && state.queue[depth+1]==move.location.type){
-      state.hold = state.queue[depth]
+    else if(state.hold==null && bot.queue[depth+1]==move.location.type){
+      state.hold = bot.queue[depth]
     }
     depth+=1
-    if(state.queue[depth]){
-      let spawn = this.initPiece(state.queue[depth])
+    if(bot.queue[depth]){
+      let spawn = this.initPiece(bot.queue[depth])
       if(this.checkIntersection(state.board,spawn)){
         spawn.y+=1
         if(this.checkIntersection(state.board,spawn)){
@@ -805,9 +805,9 @@ class Game{
       board[i] = state.board[i].slice();
     weights = weights || this.weights
     let tCount = 0
-    for(let i = depth; i < 7+depth; i++){
-      if(state.queue[i]){
-        if(state.queue[i]=="T")tCount++
+    for(let i = depth; i < 5+depth; i++){
+      if(bot.queue[i]){
+        if(bot.queue[i]=="T")tCount++
       }
       else{
         break
@@ -955,11 +955,11 @@ class Node{
   expand(weights = null){
     if(!this.state)return false
     let depth = this.depth+!!this.state.hold
-    if(!this.state.queue[depth])return false
-    let moves = game.getMoves(this.state,this.state.queue[depth])
+    if(!bot.queue[depth])return false
+    let moves = game.getMoves(this.state,bot.queue[depth])
     if(this.state.hold)moves = moves.concat(game.getMoves(this.state,this.state.hold))
-    else if(this.state.queue[depth+1]){
-      moves = moves.concat(game.getMoves(this.state,this.state.queue[depth+1]))
+    else if(bot.queue[depth+1]){
+      moves = moves.concat(game.getMoves(this.state,bot.queue[depth+1]))
     }
     let dead = 0
     for(let move of moves){
@@ -1055,9 +1055,11 @@ class Bot{
   constructor(){
     this.root = null
     this.thinker = null
+    this.queue = null
   }
   loadState(state){
     this.root = null
+    this.queue = state.queue
     game.rows = state.board.length
     game.cols = state.board[0].length
     this.root = new Node(null,null,state)
@@ -1073,7 +1075,7 @@ class Bot{
     if(this.thinker)this.thinker.calculating = false
   }
   newPiece(piece){
-    if(this.root.state)this.root.state.queue.push(piece)
+    this.queue.push(piece)
   }
 
   processMove(move){
@@ -1129,6 +1131,7 @@ onmessage = function(e){
         console.log("forceRolling")
         bot.root.rollout()
         console.log(bot.root)
+        console.log(bot.queue)
       }
       post({
         type:"suggestion",
@@ -1148,7 +1151,7 @@ onmessage = function(e){
   }
 }
 //parentPort.on("message",message=>{
-  //onmessage({data:message})
+//  onmessage({data:message})
 //})
 
 post({
