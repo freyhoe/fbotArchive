@@ -1077,7 +1077,7 @@ class Bot{
     this.thinker.run()
   }
   stopThink(){
-    this.thinker.calculating = false
+    if(this.thinker)this.thinker.calculating = false
   }
   newPiece(piece){
   //  console.log(piece)
