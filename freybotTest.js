@@ -1120,11 +1120,12 @@ onmessage = function(e){
       let state = {hold:data.hold, queue:data.queue, combo:data.combo, back_to_back:data.back_to_back, board:data.board}
       bot.loadState(state)
       bot.root.rollout()//ensure at least 1 rollout
-      bot.think()
+      //bot.think()
       break
     case "play":
       bot.processMove(data.move)
-      bot.think()
+      bot.root.rollout()
+  //    bot.think()
       break
     case "suggest":
     console.log(bot.root)
