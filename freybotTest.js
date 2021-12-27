@@ -1085,7 +1085,6 @@ class Bot{
       if(move.location.orientation == check.location.orientation && move.location.type == check.location.type && move.location.x == check.location.x && move.location.y == check.location.y){//spin doesnt matter, we get max possible spins anyway
         this.root = this.root.children[i]
         this.root.parent = null //patricide the old tree
-        this.root.rollout()
         return
       }
     }
