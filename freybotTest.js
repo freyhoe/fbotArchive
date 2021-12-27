@@ -349,7 +349,7 @@ class Game{
       miniTspin1: -158,
       miniTspin2: -93,
       tWaste:-152,
-      combo:150,
+      combo:1000,
     }
     this.hdMoves = {
       "T":[[3,0,'north'],[2,0,'north'],[1,0,'north'],[4,0,'north'],[5,0,'north'],[6,0,'north'],[7,0,'north'],[8,0,'north'],[3,1,'east'],[2,1,'east'],[1,1,'east'],[0,1,'east'],[4,1,'east'],[5,1,'east'],[6,1,'east'],[7,1,'east'],[8,1,'east'],[3,1,'west'],[2,1,'west'],[1,1,'west'],[4,1,'west'],[5,1,'west'],[6,1,'west'],[7,1,'west'],[8,1,'west'],[9,1,'west'],[3,1,'south'],[2,1,'south'],[1,1,'south'],[4,1,'south'],[5,1,'south'],[6,1,'south'],[7,1,'south'],[8,1,'south']],
@@ -1131,7 +1131,6 @@ onmessage = function(e){
         console.log("forceRolling")
         bot.root.rollout()
         console.log(bot.root)
-        console.log(bot.queue)
       }
       post({
         type:"suggestion",
