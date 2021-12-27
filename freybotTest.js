@@ -1127,10 +1127,11 @@ onmessage = function(e){
       bot.think()
       break
     case "suggest":
+    console.log(bot.root)
       if(bot.root.children.length==0){
         console.log("forceRolling")
         bot.root.rollout()
-        console.log(bot.root)
+
       }
       post({
         type:"suggestion",
