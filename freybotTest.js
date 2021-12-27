@@ -977,7 +977,7 @@ class Node{
     }
 
     if(this.children.length>0){
-      this.state = null //this node is no longer a leaf node, we don't need its state using up space
+    //  this.state = null //this node is no longer a leaf node, we don't need its state using up space
       return true
     }
     else{
