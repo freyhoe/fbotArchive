@@ -977,7 +977,7 @@ class Node{
     }
 
     if(this.children.length>0){
-      this.state = null //this node is no longer a leaf node, we don't need its state using up space
+    //  this.state = null //this node is no longer a leaf node, we don't need its state using up space
       return true
     }
     else{
@@ -1060,12 +1060,14 @@ class Bot{
   loadState(state){
     this.root = null
     this.queue = state.queue
-    console.log(this.queue)
+
     game.rows = state.board.length
     game.cols = state.board[0].length
     this.root = new Node(null,null,state)
     this.root.rollout()
-    console.log(this.root)
+    console.log(this.queue)
+    console.log(state.hold)
+    game.printBoard(state.board)
   }
   think(){
     if(this.thinker){
@@ -1089,6 +1091,7 @@ class Bot{
         this.root = this.root.children[i]
         this.root.parent = null //patricide the old tree
         this.root.rollout()
+        printBoard(this.root.state.board)
         return
       }
     }
