@@ -1138,7 +1138,7 @@ onmessage = function(e){
       if(bot.root.children.length==0){
         console.log("forceRolling")
         bot.root.rollout()
-    //    console.log(bot.root)
+        console.log(bot.root)
       }
       post({
         type:"suggestion",
