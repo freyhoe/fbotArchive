@@ -1066,7 +1066,7 @@ class Bot{
     this.root = new Node(null,null,state)
     this.root.rollout()
     console.log(this.queue)
-    console.log(state.hold)
+    console.log(this.root.state.hold)
     game.printBoard(state.board)
   }
   think(){
