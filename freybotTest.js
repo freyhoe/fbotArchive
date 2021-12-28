@@ -1064,6 +1064,9 @@ class Bot{
     game.rows = state.board.length
     game.cols = state.board[0].length
     this.root = new Node(null,null,state)
+    if(state.hold){
+      this.root.depth-=1
+    }
     this.root.rollout()
     console.log(this.queue)
     console.log(this.root.state.hold)
