@@ -1064,6 +1064,8 @@ class Bot{
     game.rows = state.board.length
     game.cols = state.board[0].length
     this.root = new Node(null,null,state)
+    this.root.rollout()
+    console.log(this.root)
   }
   think(){
     if(this.thinker){
@@ -1120,7 +1122,6 @@ onmessage = function(e){
     case "start":
       let state = {hold:data.hold, queue:data.queue, combo:data.combo, back_to_back:data.back_to_back, board:data.board}
       bot.loadState(state)
-      bot.root.rollout()//ensure at least 1 rollout
       bot.think()
       break
     case "play":
