@@ -1068,9 +1068,9 @@ class Bot{
       this.root.depth-=1
     }
     this.root.rollout()
-    console.log(this.queue)
-    console.log(this.root.state.hold)
-    game.printBoard(state.board)
+//    console.log(this.queue)
+  //  console.log(this.root.state.hold)
+  //  game.printBoard(state.board)
   }
   think(){
     if(this.thinker){
@@ -1094,7 +1094,7 @@ class Bot{
         this.root = this.root.children[i]
         this.root.parent = null //patricide the old tree
         this.root.rollout()
-        game.printBoard(this.root.state.board)
+    //    game.printBoard(this.root.state.board)
         return
       }
     }
@@ -1138,7 +1138,7 @@ onmessage = function(e){
       if(bot.root.children.length==0){
         console.log("forceRolling")
         bot.root.rollout()
-        console.log(bot.root)
+    //    console.log(bot.root)
       }
       post({
         type:"suggestion",
