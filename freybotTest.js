@@ -1091,7 +1091,7 @@ class Bot{
         this.root = this.root.children[i]
         this.root.parent = null //patricide the old tree
         this.root.rollout()
-        printBoard(this.root.state.board)
+        game.printBoard(this.root.state.board)
         return
       }
     }
