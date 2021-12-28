@@ -977,7 +977,7 @@ class Node{
     }
 
     if(this.children.length>0){
-    //  this.state = null //this node is no longer a leaf node, we don't need its state using up space
+      this.state = null //this node is no longer a leaf node, we don't need its state using up space
       return true
     }
     else{
@@ -1060,6 +1060,7 @@ class Bot{
   loadState(state){
     this.root = null
     this.queue = state.queue
+    console.log(this.queue)
     game.rows = state.board.length
     game.cols = state.board[0].length
     this.root = new Node(null,null,state)
@@ -1085,6 +1086,7 @@ class Bot{
       if(move.location.orientation == check.location.orientation && move.location.type == check.location.type && move.location.x == check.location.x && move.location.y == check.location.y){//spin doesnt matter, we get max possible spins anyway
         this.root = this.root.children[i]
         this.root.parent = null //patricide the old tree
+        this.root.rollout()
         return
       }
     }
@@ -1119,27 +1121,23 @@ onmessage = function(e){
       let state = {hold:data.hold, queue:data.queue, combo:data.combo, back_to_back:data.back_to_back, board:data.board}
       bot.loadState(state)
       bot.root.rollout()//ensure at least 1 rollout
-      //bot.think()
+      bot.think()
       break
     case "play":
       bot.processMove(data.move)
-      bot.root.rollout()
-  //    bot.think()
+      bot.think()
       break
     case "suggest":
-    console.log(bot.root)
       if(bot.root.children.length==0){
         console.log("forceRolling")
         bot.root.rollout()
-
+        console.log(bot.root)
       }
-      let iters = 0
-      if(bot.thinker)iters = bot.thinker.iters
       post({
         type:"suggestion",
         moves:bot.root.children.map(x=>x.move),
         move_info:{
-          iters:iters
+          iters:bot.thinker.iters
         }
       })
       break
