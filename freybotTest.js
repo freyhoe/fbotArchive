@@ -1810,10 +1810,6 @@ class Bot{
     let counter = state.queue[state.queue.length-1].counter
     for(let move of moves){
       let newState = game.ai_nextState(state,move)
-      if(counter<this.pushQueue.length){
-        console.log(newState.queue)
-        console.log(this.pushQueue)
-      }
       newState.queue = newState.queue.concat(this.pushQueue.slice(counter))
       if(counter > 0){}
       let child = new Node(node,newState,move,game.getValue(newState,move,this.settings.weights))
@@ -1902,9 +1898,7 @@ onmessage = function(e) {
 			bot.calculating=false
 			// The suggest message tells the bot to suggest some next moves in order of preference.
       let moves = bot.getMoves(!usingTBP)
-      if(moves.length==0){
-        console.log(bot.root)
-      }
+      console.log(bot.root)
 			postMessage({
 				type: "suggestion",
 				moves: bot.getMoves(!usingTBP),
