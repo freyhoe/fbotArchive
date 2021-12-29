@@ -1806,11 +1806,12 @@ class Bot{
         moves = moves.concat(game.ai_legalMoves(state.matrix, state.hold))
       }
     }
-    let counter = state.queue[state.queue.length-1].counter
+//    let counter = state.queue[state.queue.length-1].counter
     for(let move of moves){
       let newState = game.ai_nextState(state,move)
-  //    let counter = newState.queue[newState.queue.length-1].counter
-      if(!counter)counter = 0
+      let last = newState.queue[newState.queue.length-1]
+      let counter = 0
+      if(last && last.counter)counter = last.counter
       newState.queue = newState.queue.concat(this.pushQueue.slice(counter))
       let child = new Node(node,newState,move,game.getValue(newState,move,this.settings.weights))
       node.children.push(child)
