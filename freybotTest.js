@@ -885,7 +885,7 @@ class Game{
           }
           chars.push("\n")
       }
-      console.log(chars.join(""))
+      return chars.join("")
   }
 }
 let nodesCreated = 0
@@ -920,6 +920,7 @@ class Node{
       else{
         let value = game.scoreState(newState,move,this.depth,weights) //get the score of the board
         let child = new Node(this, move, newState, value)
+        child.aaa = game.printBoard(newState.board)
         this.children.push(child)
       }
     }
