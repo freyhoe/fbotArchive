@@ -1779,6 +1779,7 @@ class Bot{
       if(child.move.x == move.x && child.move.y == move.y && child.move.r == move.r && child.move.piece.id == move.piece.id){
         this.root = child
         this.root.parent = null
+        console.log("AYO")
         return
       }
     }
