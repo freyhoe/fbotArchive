@@ -1867,6 +1867,7 @@ const usingTBP = true
 
 onmessage = function(e) {
 	let m = e.data;
+  console.log("type", m.type, "recieved")
 	switch (m.type) {
 		case "rules":
 			// Currently, this message is empty, and will be extended later.
