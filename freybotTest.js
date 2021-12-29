@@ -1898,6 +1898,10 @@ onmessage = function(e) {
 		case "suggest":
 			bot.calculating=false
 			// The suggest message tells the bot to suggest some next moves in order of preference.
+      let moves = bot.getMoves(!usingTBP)
+      if(moves.length==0){
+        console.log(bot.root)
+      }
 			postMessage({
 				type: "suggestion",
 				moves: bot.getMoves(!usingTBP),
