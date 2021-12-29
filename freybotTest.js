@@ -1088,6 +1088,7 @@ onmessage = function(e){
         bot.root.rollout()
         console.log(bot.root)
       }
+      console.log(bot.root)
       post({
         type:"suggestion",
         moves:bot.root.children.map(x=>x.move),
