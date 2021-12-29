@@ -1791,6 +1791,7 @@ class Bot{
     if(typeof(block)=="string")block = new Block(reversePIndex[piece])
     block.counter = this.counter
     this.pushQueue.push(block)
+    console.log(pushQueue)
   }
   expandNode(node){
     let state = node.state
@@ -1872,7 +1873,6 @@ const usingTBP = true
 
 onmessage = function(e) {
 	let m = e.data;
-  console.log("type", m.type, "recieved")
 	switch (m.type) {
 		case "rules":
 			// Currently, this message is empty, and will be extended later.
