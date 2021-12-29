@@ -37,7 +37,7 @@ function TFstate(state_input){
   if(state_input.hold)state.hold = (new Block (reversePIndex[state_input.hold]))
   return state
 }
-function FTmove(ss,action){
+function FTmove(ss){
   let move = {}
   move.type = pIndex[ss.piece.id]
   move.orientation = rIndex[ss.r]
@@ -45,10 +45,7 @@ function FTmove(ss,action){
   let y = jstrisToCenterY[ss.piece.id][ss.r]+ss.y
   move.x = x
   move.y = 19-y
-  let spin = "none"
-  if(action=="TSD" || action == "TST" || action == "TSS")spin = "full"
-  if(action=="TSMS")spin == "mini"
-  return {location:move,spin:spin}
+  return {location:move,spin:ss.spin}
 }
 function TFmove(ss){
   let spin = ss.spin
@@ -208,8 +205,7 @@ function objCopy(_0xa670xb) {
       };
       return _0xa670x1d
   }
-function Block(_0xa670x35, moves=0) {
-  this.counter = moves
+function Block(_0xa670x35) {
       this['id'] = _0xa670x35;
       this['set'] = 0;
       this['pos'] = {
@@ -840,7 +836,7 @@ Game.prototype.ai_legalMoves = function(matrix, piece){
     return(Array.from(explored.values()))
   }
 Game.prototype.ai_simRotate = function(state_input, r, matrix, activeBlock) {
-      var state = this.ai_copyMove(state_input)
+      var state = {x:state_input.x, y:state_input.y, r:state_input.r, actions:[...state_input.actions], piece:state_input.piece,tcheck:state_input.tcheck}
       let rString = (r === -1) ? '-1' : ((r === 1) ? '1' : '2'),
           newRot = (state.r + r + 4)%4;
       let block = this.blockSets[activeBlock.set].blocks[activeBlock.id],
@@ -859,13 +855,12 @@ Game.prototype.ai_simRotate = function(state_input, r, matrix, activeBlock) {
       };
       return state
   };
-Game.prototype.ai_copyMove = function(state_input){
-  return {x:state_input.x, y:state_input.y, r:state_input.r, actions:[...state_input.actions], piece:state_input.piece,tcheck:state_input.tcheck}
-}
 Game.prototype.ai_simulateAction = function(state_input, action, matrix, piece,cbool) {
-      var state = this.ai_copyMove(state_input)
+      var state = {x:state_input.x, y:state_input.y, r:state_input.r, actions:[...state_input.actions], piece:state_input.piece,tcheck:state_input.tcheck}
       if(cbool){
+        if(state.actions[state.actions.length-1]=='hd')state.actions.pop()
         state.actions.push(action)
+        state.actions.push('hd')
       }
       if (action == '<<') {
           for (let shift = 1; shift < 15; shift++) {
@@ -920,7 +915,23 @@ Game.prototype.ai_simulateAction = function(state_input, action, matrix, piece,c
           }
       }
   };
-
+Game.prototype.ai_addGarbage= function(state,_0x44dcx77) {
+  if(_0x44dcx77<=0)return
+  let _0x44dcx78 = [9, 9, 9, 9, 9, 9, 9, 9, 9, 9];
+  if (_0x44dcx77 <= state.matrix.length) {
+    state.deadline = state.matrix[_0x44dcx77 - 1].slice(0)
+  } else {
+    state.deadline = _0x44dcx78.slice(0)
+  };
+  let _0x44dcx79 = state.matrix.length
+  for (let _0x44dcx18 = 0; _0x44dcx18 < _0x44dcx79; _0x44dcx18++) {
+    if ((_0x44dcx79 - _0x44dcx18) > _0x44dcx77) {
+      state.matrix[_0x44dcx18] = state.matrix[_0x44dcx18 + _0x44dcx77].slice(0)
+    } else {
+      state.matrix[_0x44dcx18] = _0x44dcx78.slice(0)
+    }
+  };
+};
 Game.prototype.ai_checkIntersection = function(_v6b, _v6c, _vf0, matrix, piece) {
 _vf0 = (_vf0 === null) ? piece.rot : _vf0;
 let _v34 = this.blockSets[piece.set],
@@ -943,129 +954,16 @@ for (var _v18 = 0; _v18 < _v36; _v18++) {
 };
 return false
 };
-
-Game.prototype.ai_checkClears = function(matrix, deadline){
-  let blocks_line = 0
-  for(let w = 0; w < 10; w++){
-    if(deadline[w]!=0)blocks_line++
-    else{
-      if(blocks_line>0)break
-    }
-  }
-  if(blocks_line==10){
-    return true
-  }
-  for(let h = 0; h<20; h++){
-    blocks_line=0
-    for(let w = 0; w < 10; w++){
-      let id = matrix[h][w]
-      if(id==9)break
-      else{
-        if(id!=0){
-          blocks_line++
-        }
-      }
-    }
-    if(blocks_line==10){
-      return true
-    }
-  }
-  return false
-}
-Game.prototype.ai_createMove = function(matrix, deadline, start, end){
-  let moves = [{x:start.pos.x,y:start.pos.y,r:start.rot, actions:[],piece:start, tcheck:false}]
-  let explored = [""+start.pos.x+" "+start.pos.y+" "+start.rot]
-  const branch_moves = ['<','>','cw','ccw','sd','<<','>>','180']
-  const weights = {'<':-1, '>':-1, 'cw':-1, 'ccw':-1, 'sd':-1, '<<':-2, '>>':-2,'180':-0.5}
-  let depth = 20
-  let bestScore = -Infinity
-  let bestMove = null
-  let spinNes = false
-  if(this.blockSets[end.piece.set].blocks[end.piece.id].name=='T' && end.tcheck){
-    let bpush = this.ai_placeBlock(end.x, end.y, end.r, matrix, deadline, end.piece)
-    spinNes = this.ai_checkClears(bpush.matrix, bpush.deadline)
-  }
-  while (depth-->0){
-    let push=[]
-    for(let move of moves){
-      for(let step of branch_moves){
-        let next = this.ai_simulateAction(move,step,matrix,start,true)
-        if(!explored.includes(""+next.x+" "+next.y+ " "+next.r)){
-
-          if(next.x==end.x && next.y == end.y && next.r ==end.r){
-            if((spinNes && next.tcheck) || !spinNes){
-              let score = 0
-              let flipped = false
-              for(let act of next.actions){
-                if(weights[act]!=undefined)score += weights[act]
-                if(flipped || act == 'sd'){
-                  flipped = true
-                  score-=2
-                }
-              }
-              if(score > bestScore){
-                bestScore = score
-                bestMove = next
-              }
-            }
-          }
-          else{
-            explored.push(""+next.x+" "+next.y+ " "+next.r)
-            push.push(next)
-          }
-        }
-      }
-    }
-    moves = push
-    if(moves.length==0)break
-  }
-  return bestMove
-}
-Game.prototype.ai_placeBlock = function(px, py, r, matrix, deadline, piece) {
-  matrix = matrix.map(function(arr){return arr.slice();})
-  deadline = [...deadline]
-    let kv2 = 0,
-        kv1 = 0,
-        blocks = this['blockSets'][piece['set']]['blocks'][piece['id']],
-        blocks_len = blocks['blocks'][r]['length']
-
-    for (var r1 = 0; r1 < blocks_len; r1++) {
-        for (var r2 = 0; r2 < blocks_len; r2++) {
-            let bval = blocks['blocks'][r][r1][r2];
-            if (bval > 0) {
-                ++kv1;
-                if ((py + r1) >= 0 && (px + r2) >= 0) {
-                    matrix[py + r1][px + r2] = blocks['color']
-                } else {
-                    kv2++;
-                    if ((py + r1) === (-1)) {
-                        if (deadline[px + r2] === 0) {
-                            deadline[px + r2] = blocks['color']
-                        }
-                    }
-                }
-            }
-        }
-    };
-    let kill = false
-    if (kv2 === kv1) {
-        kill = true
-    };
-    return{matrix:matrix,deadline:deadline,kill:kill}
-  }
 Game.prototype.ai_nextState = function(push,move) {
   let state = copyState(push)
-  let bpush = this.ai_placeBlock(move.x,move.y,move.r,state.matrix,state.deadline, move.piece)
-  state.matrix = bpush.matrix
-  state.deadline = bpush.deadline
-  if(bpush.kill)state.dead = true
+  state.matrix = this.ai_placeBlock(move.x,move.y,move.r,state.matrix,move.piece)
   let cleared_lines = 0
   let blocks_line = 0
   let sum_blocks = 0
   let spinMiniPossible = false
   let spinPossible = false
   let clear_score_type = ''
-  if(this.blockSets[move.piece.set].blocks[move.piece.id].name=='T'){
+  if(move.piece.id==2){
     let res = this.ai_checkTSpin(state,move)
     spinMiniPossible=res.spinMiniPossible
     spinPossible=res.spinPossible
@@ -1282,7 +1180,29 @@ Game.prototype.ai_nextState = function(push,move) {
   }}
   return state
 }
-
+Game.prototype.ai_placeBlock = function(_v6b, _v6c, _vf0, matrix, piece) {
+    let newMatrix = matrix.map(arr => arr.slice());
+_vf0 = (_vf0 === null) ? piece.rot : _vf0;
+let _v34 = this.blockSets[piece.set],
+    _v35 = _v34.blocks[piece.id].blocks,
+    _v36 = _v34.blocks[piece.id].blocks[_vf0].length;
+for (let _v18 = 0; _v18 < _v36; _v18++) {
+    for (let _v19 = 0; _v19 < _v36; _v19++) {
+        if (_v35[_vf0][_v18][_v19] > 0) {
+            if ((_v6c + _v18) >= 20) {
+                continue;
+            };
+            if ((_v6b + _v19) < 0 || (_v6b + _v19) >= 10) {
+                continue;
+            };
+            if ((_v6c + _v18) >= 0) {
+                newMatrix[_v6c + _v18][_v6b + _v19]=piece.id+1
+            }
+        }
+    }
+};
+return newMatrix
+};
 Game.prototype.ai_fireAction = function(action, time=undefined) {
         time = time || this.timestamp();
         if (action == '<<') {
@@ -1428,23 +1348,6 @@ Game.prototype.matchTspin = function(state){
   }
   return bestState
 }
-Game.prototype.ai_addGarbage= function(state,_0x44dcx77) {
-  if(_0x44dcx77<=0)return
-  let _0x44dcx78 = [9, 9, 9, 9, 9, 9, 9, 9, 9, 9];
-  if (_0x44dcx77 <= state.matrix.length) {
-    state.deadline = state.matrix[_0x44dcx77 - 1].slice(0)
-  } else {
-    state.deadline = _0x44dcx78.slice(0)
-  };
-  let _0x44dcx79 = state.matrix.length
-  for (let r1 = 0; r1 < _0x44dcx79; r1++) {
-    if ((_0x44dcx79 - r1) > _0x44dcx77) {
-      state.matrix[r1] = state.matrix[r1 + _0x44dcx77].slice(0)
-    } else {
-      state.matrix[r1] = _0x44dcx78.slice(0)
-    }
-  };
-};
 Game.prototype.getValue = function(state,move, standard){
     let score = 0
     let matrix = state.matrix
@@ -1630,9 +1533,6 @@ class Bot{
     this.root = null
     this.iters = 0
     this.calculating=false
-    this.macroCutoff = 0
-    this.counter = 0
-    this.pushQueue = []
   }
   loadWeights(arr){
   this.settings.weights = {
@@ -1672,8 +1572,6 @@ class Bot{
             }
   }
   loadState(state,flipped = false){
-    this.counter = 0
-    this.pushQueue = []
     if(flipped)this.state=copyState(state)
     else this.state = TFstate(state)
     this.root = new Node(null, copyState(this.state))
@@ -1694,104 +1592,18 @@ class Bot{
       this.backprop(selectedNode)
     }
   }
-  macro(opp){
-    this.settings.weights = {back_to_back: 52,
-    bumpiness: -24,
-    bumpiness_sq:-7,
-    row_transitions:-5,
-    height:-39,
-    top_half:-150,
-    top_quarter:-511,
-    cavity_cells:-173,
-    cavity_cells_sq:-3,
-    overhang_cells:-34,
-    overhang_cells_sq: -1,
-    covered_cells: -17,
-    covered_cells_sq: -1,
-    tslot: [8, 148, 192, 407],
-    well_depth: 57,
-    max_well_depth: 17,
-    well_column: [-30, -50, 20, 50, 60, 60, 50, 20, -50, -30],
-
-    wasted_t: -152,
-    b2b_clear: 104,
-    clear1: -143,
-    clear2: -100,
-    clear3: -58,
-    clear4: 390,
-    tspin1: 121,
-    tspin2: 410,
-    tspin3: 602,
-    mini_tspin1: -158,
-    mini_tspin2: -93,
-    perfect_clear: 999,
-    combo_garbage: 200,
-    tank:[17,4],
-    spike:115,}
-    if(!opp)return
-    this.loadState(opp,true)
-    console.log(this.root)
-    if(this.root.value>this.settings.macroCutoff){
-      console.log("cheesy")
-      this.settings.weights = {back_to_back: 52,
-      bumpiness: -24,
-      bumpiness_sq:-7,
-      row_transitions:-5,
-      height:-39,
-      top_half:-150,
-      top_quarter:-511,
-      cavity_cells:-173,
-      cavity_cells_sq:-3,
-      overhang_cells:-34,
-      overhang_cells_sq: -1,
-      covered_cells: -17,
-      covered_cells_sq: -1,
-      tslot: [8, 148, 192, -10],
-      well_depth: 57,
-      max_well_depth: 17,
-      well_column: [-30, -50, 20, 50, 60, 60, 50, 20, -50, -30],
-
-      wasted_t: -152,
-      b2b_clear: 104,
-      clear1: -143,
-      clear2: 70,
-      clear3: 150,
-      clear4: -10,
-      tspin1: 300,
-      tspin2: -20,
-      tspin3: -30,
-      mini_tspin1: -158,
-      mini_tspin2: -93,
-      perfect_clear: 999,
-      combo_garbage: 400,
-      tank:[17,4],
-      spike:200,}
-    }
-  }
   getMoves(flipped = false){
     this.root.children = this.root.children.concat(this.root.orphans)
     if(flipped)return this.root.children.map(x=>x.move)
-    return this.root.children.map(x=>FTmove(x.move,x.state.action))
+    return this.root.children.map(x=>FTmove(x.move))
   }
   processMove(move){
-    if(usingTBP)move = TFmove(move)
-    for(let child of this.root.children){
-      if(child.move.x == move.x && child.move.y == move.y && child.move.r == move.r && child.move.piece.id == move.piece.id){
-        this.root = child
-        this.root.parent = null
-        console.log("AYO")
-        return
-      }
-    }
+    move = TFmove(move)
     let state = game.ai_nextState(this.state,move)
     this.loadState(state,true)
   }
   addPieceToQueue(piece){
-    this.counter+=1
-    let block = piece
-    if(typeof(block)=="string")block = new Block(reversePIndex[piece])
-    block.counter = this.counter
-    this.pushQueue.push(block)
+    this.state.queue.push(new Block(reversePIndex[piece]))
   }
   expandNode(node){
     let state = node.state
@@ -1807,11 +1619,8 @@ class Bot{
         moves = moves.concat(game.ai_legalMoves(state.matrix, state.hold))
       }
     }
-    let counter = state.queue[state.queue.length-1].counter
     for(let move of moves){
       let newState = game.ai_nextState(state,move)
-      newState.queue = newState.queue.concat(this.pushQueue.slice(counter))
-      if(counter > 0){}
       let child = new Node(node,newState,move,game.getValue(newState,move,this.settings.weights))
       node.children.push(child)
     }
@@ -1862,12 +1671,9 @@ class Bot{
       return path
   }
 }
-
 let bot = new Bot()
 
-
 //function postMessage(e){console.log(e)}
-const usingTBP = true
 
 onmessage = function(e) {
 	let m = e.data;
@@ -1882,27 +1688,17 @@ onmessage = function(e) {
 		case "start":
 			bot.calculating=false
 			// The start message tells the bot to begin calculating from the specified position.
-      let state=m.state
-      if(usingTBP){
-        state = {hold:m.hold, queue:m.queue,combo:m.combo,back_to_back:m.back_to_back,board:m.board}
-      }
-    //  bot.settings.macroCutoff=m.macroCutoff
-  //    bot.macro(m.oppState)
-      bot.loadState(state,!usingTBP)
-
+      let state = {hold:m.hold, queue:m.queue,combo:m.combo,back_to_back:m.back_to_back,board:m.board}
+      bot.loadState(state)
       bot.calculating=true
-      console.log(bot.root)
 			bot.think()
 			break;
 		case "suggest":
 			bot.calculating=false
 			// The suggest message tells the bot to suggest some next moves in order of preference.
-      let moves = bot.getMoves(!usingTBP)
-      console.log(bot.root)
-      console.log(bot.pushQueue)
 			postMessage({
 				type: "suggestion",
-				moves: bot.getMoves(!usingTBP),
+				moves: bot.getMoves(),
         move_info: {rollouts:bot.iters+1}
 			});
 			break;
