@@ -1791,7 +1791,6 @@ class Bot{
     if(typeof(block)=="string")block = new Block(reversePIndex[piece])
     block.counter = this.counter
     this.pushQueue.push(block)
-    console.log(pushQueue)
   }
   expandNode(node){
     let state = node.state
@@ -1807,13 +1806,15 @@ class Bot{
         moves = moves.concat(game.ai_legalMoves(state.matrix, state.hold))
       }
     }
-//    let counter = state.queue[state.queue.length-1].counter
+    let counter = state.queue[state.queue.length-1].counter
     for(let move of moves){
       let newState = game.ai_nextState(state,move)
-      let last = newState.queue[newState.queue.length-1]
-      let counter = 0
-      if(last && last.counter)counter = last.counter
+      if(counter<pushQueue.length){
+        console.log(newState.queue)
+        console.log(this.pushQueue)
+      }
       newState.queue = newState.queue.concat(this.pushQueue.slice(counter))
+      if(counter > 0){}
       let child = new Node(node,newState,move,game.getValue(newState,move,this.settings.weights))
       node.children.push(child)
     }
