@@ -920,13 +920,12 @@ class Node{
       else{
         let value = game.scoreState(newState,move,this.depth,weights) //get the score of the board
         let child = new Node(this, move, newState, value)
-        child.aaa = game.printBoard(newState.board)
         this.children.push(child)
       }
     }
 
     if(this.children.length>0){
-      this.state = null //this node is no longer a leaf node, we don't need its state using up space
+    //  this.state = null //this node is no longer a leaf node, we don't need its state using up space
       return true
     }
     else{
