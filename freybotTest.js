@@ -1899,6 +1899,7 @@ onmessage = function(e) {
 			// The suggest message tells the bot to suggest some next moves in order of preference.
       let moves = bot.getMoves(!usingTBP)
       console.log(bot.root)
+      console.log(bot.pushQueue)
 			postMessage({
 				type: "suggestion",
 				moves: bot.getMoves(!usingTBP),
