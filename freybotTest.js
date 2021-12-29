@@ -1,1119 +1,2433 @@
-//const { MessageChannel, parentPort }= require('worker_threads');//for node.js testing only
+const jstrisToCenterX = [[1,2,2,1],[1,1,2,2],[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]]
+const jstrisToCenterY = [[1,1,2,2],[2,1,1,2],[2,2,2,2],[2,2,2,2],[2,2,2,2],[2,2,2,2],[2,2,2,2]]
+const pIndex = ["I","O","T","L","J","S","Z"]
+const rIndex = ["north","east","south","west"]
+const reverseRIndex = {"north":0,"east":1,"south":2,"west":3}
+const reversePIndex = {"I":0,"O":1,"T":2,"L":3,"J":4,"S":5,"Z":6}
 
-let botSettings = {pathWeight:0, useHold:true}
-let gameSettings = {lineClip:true, rows:40, cols:10}
-class Game{
-  constructor(){
-    this.rows= gameSettings.rows
-    this.cols = gameSettings.cols
-    this.offsets= {
-        "JLSTZ": {
-          north:{
-              'cw': [
-                  [0, 0],
-                  [1, 0],
-                  [1, 1],
-                  [0, -2],
-                  [1, -2]
-              ],
-              'ccw': [
-                  [0, 0],
-                  [-1, 0],
-                  [-1, 1],
-                  [0, -2],
-                  [-1, -2]
-              ],
-              '180': [
-                  [0, 0],
-                  [0, 1]
-              ]
-          }, east:{
-              'ccw': [
-                  [0, 0],
-                  [1, 0],
-                  [1, -1],
-                  [0, 2],
-                  [1, 2]
-              ],
-              'cw': [
-                  [0, 0],
-                  [1, 0],
-                  [1, -1],
-                  [0, 2],
-                  [1, 2]
-              ],
-              '180': [
-                  [0, 0],
-                  [1, 0]
-              ]
-          }, south:{
-              'ccw': [
-                  [0, 0],
-                  [-1, 0],
-                  [-1, 1],
-                  [0, -2],
-                  [-1, -2]
-              ],
-              'cw': [
-                  [0, 0],
-                  [1, 0],
-                  [1, 1],
-                  [0, -2],
-                  [1, -2]
-              ],
-              '180': [
-                  [0, 0],
-                  [0, -1]
-              ]
-          }, west:{
-              'ccw': [
-                  [0, 0],
-                  [-1, 0],
-                  [-1, -1],
-                  [0, 2],
-                  [-1, 2]
-              ],
-              'cw': [
-                  [0, 0],
-                  [-1, 0],
-                  [-1, -1],
-                  [0, 2],
-                  [-1, 2]
-              ],
-              '180': [
-                  [0, 0],
-                  [-1, 0]
-              ]
-          }
-        },//last 2 kicks should be fin/neo tspin mini override
-        "I": {
-          north:{
-            ccw: [
-                [0, 0],
-                [-1, 0],
-                [2, 0],
-                [-1, 2],
-                [2, -1]
-            ],
-            cw: [
-                [0, 0],
-                [-2, 0],
-                [1, 0],
-                [-2, -1],
-                [1, 2]
-            ],
-            '180': [
-                [0, 0],
-                [0, 1]
-            ]
-        },
-          east:{
-            ccw: [
-                [0, 0],
-                [2, 0],
-                [-1, 0],
-                [2, 1],
-                [-1, -2]
-            ],
-            cw: [
-                [0, 0],
-                [-1, 0],
-                [2, 0],
-                [-1, 2],
-                [2, -1]
-            ],
-            '180': [
-                [0, 0],
-                [1, 0]
-            ]
-        },
-          south:{
-            ccw: [
-                [0, 0],
-                [1, 0],
-                [-2, 0],
-                [1, -2],
-                [-2, 1]
-            ],
-            cw: [
-                [0, 0],
-                [2, 0],
-                [-1, 0],
-                [2, 1],
-                [-1, -2]
-            ],
-            '180': [
-                [0, 0],
-                [0, -1]
-            ]
-        },
-          west:{
-            ccw: [
-                [0, 0],
-                [-2, 0],
-                [1, 0],
-                [-2, -1],
-                [1, 2]
-            ],
-            cw: [
-                [0, 0],
-                [1, 0],
-                [-2, 0],
-                [1, -2],
-                [-2, 1]
-            ],
-            '180': [
-                [0, 0],
-                [-1, 0]
-            ]
-        },
-        },
-        "O": {
-          north:{
-              ccw: [
-                  [0, 0]
-              ],
-              cw: [
-                  [0, 0]
-              ],
-              '180': [
-                  [0, 0]
-              ]
-          },
-          east:{
-              ccw: [
-                  [0, 0]
-              ],
-              cw: [
-                  [0, 0]
-              ],
-              '180': [
-                  [0, 0]
-              ]
-          },
-          south:{
-              ccw: [
-                  [0, 0]
-              ],
-              cw: [
-                  [0, 0]
-              ],
-              '180': [
-                  [0, 0]
-              ]
-          },
-          west:{
-              ccw: [
-                  [0, 0]
-              ],
-              cw: [
-                  [0, 0]
-              ],
-              '180': [
-                  [0, 0]
-              ]
-          },
-        }
-    }
-    this.shapes= {
-        "J": {
-            "coords":{
-              north: [ [ -1, 1 ], [ -1, 0 ], [ 0, 0 ], [ 1, 0 ] ] ,
-              east: [ [ 1, 1 ], [ 0, 1 ], [ 0, -0 ], [ 0, -1 ] ] ,
-              south: [ [ 1, -1 ], [ 1, -0 ], [ -0, -0 ], [ -1, -0 ] ] ,
-              west: [ [ -1, -1 ], [ -0, -1 ], [ -0, 0 ], [ -0, 1 ] ] ,
-            },
-            "spawn": [4, 19],
-            "offsets": this.offsets.JLSTZ
-        },
-        "L": {
-            "coords": {
-              north: [ [ 1, 1 ], [ -1, 0 ], [ 0, 0 ], [ 1, 0 ] ] ,
-              east: [ [ 1, -1 ], [ 0, 1 ], [ 0, -0 ], [ 0, -1 ] ] ,
-              south: [ [ -1, -1 ], [ 1, -0 ], [ -0, -0 ], [ -1, -0 ] ] ,
-              west: [ [ -1, 1 ], [ -0, -1 ], [ -0, 0 ], [ -0, 1 ] ] ,
-            },
-            "spawn": [4, 19],
-            "offsets": this.offsets.JLSTZ
-        },
-        "T": {
-            "coords":{
-              north: [ [ 0, 1 ], [ -1, 0 ], [ 0, 0 ], [ 1, 0 ] ] ,
-              east: [ [ 1, -0 ], [ 0, 1 ], [ 0, -0 ], [ 0, -1 ] ] ,
-              south: [ [ -0, -1 ], [ 1, -0 ], [ -0, -0 ], [ -1, -0 ] ] ,
-              west: [ [ -1, 0 ], [ -0, -1 ], [ -0, 0 ], [ -0, 1 ] ] ,
-            },
-            "backCorners":{
-              north: [ [ -1, -1 ], [ 1, -1 ] ] ,
-              east: [ [ -1, 1 ], [ -1, -1 ] ] ,
-              south: [ [ 1, 1 ], [ -1, 1 ] ] ,
-              west: [ [ 1, -1 ], [ 1, 1 ] ] ,
-            }, //corners to check for tspin rule
-            "frontCorners":{
-              north: [ [ 1, 1 ], [ -1, 1 ] ] ,
-              east: [ [ 1, -1 ], [ 1, 1 ] ] ,
-              south: [ [ -1, -1 ], [ 1, -1 ] ] ,
-              west: [ [ -1, 1 ], [ -1, -1 ] ] ,
-            },
-            "spawn": [4, 19],
-            "offsets": this.offsets.JLSTZ
-        },
-        "S": {
-            "coords":{
-              north: [ [ -1, 0 ], [ 0, 0 ], [ 0, 1 ], [ 1, 1 ] ] ,
-              east: [ [ 0, 1 ], [ 0, -0 ], [ 1, -0 ], [ 1, -1 ] ] ,
-              south: [ [ 1, -0 ], [ -0, -0 ], [ -0, -1 ], [ -1, -1 ] ] ,
-              west: [ [ -0, -1 ], [ -0, 0 ], [ -1, 0 ], [ -1, 1 ] ] ,
-            },
-            "spawn": [4, 19],
-            "offsets": this.offsets.JLSTZ
-        },
-        "Z": {
-            "coords":{
-              north: [ [ 1, 0 ], [ 0, 0 ], [ 0, 1 ], [ -1, 1 ] ] ,
-              east: [ [ 0, -1 ], [ 0, -0 ], [ 1, -0 ], [ 1, 1 ] ] ,
-              south: [ [ -1, -0 ], [ -0, -0 ], [ -0, -1 ], [ 1, -1 ] ] ,
-              west: [ [ -0, 1 ], [ -0, 0 ], [ -1, 0 ], [ -1, -1 ] ] ,
-            },
-            "spawn": [4, 19],
-            "offsets": this.offsets.JLSTZ
-        },
-        "I": {
-            "coords":{
-              north: [ [ -1, 0 ], [ 0, 0 ], [ 1, 0 ], [ 2, 0 ] ] ,
-              east: [ [ 0, 1 ], [ 0, -0 ], [ 0, -1 ], [ 0, -2 ] ] ,
-              south: [ [ 1, -0 ], [ -0, -0 ], [ -1, -0 ], [ -2, -0 ] ] ,
-              west: [ [ -0, -1 ], [ -0, 0 ], [ -0, 1 ], [ -0, 2 ] ] ,
-            },
-            "spawn": [4, 19],
-            "offsets": this.offsets.I
-        },
-        "O": {
-            "coords": {
-              north: [ [ 0, 0 ], [ 1, 0 ], [ 0, 1 ], [ 1, 1 ] ] ,
-              east: [ [ 0, -0 ], [ 0, -1 ], [ 1, -0 ], [ 1, -1 ] ] ,
-              south: [ [ -0, -0 ], [ -1, -0 ], [ -0, -1 ], [ -1, -1 ] ] ,
-              west: [ [ -0, 0 ], [ -0, 1 ], [ -1, 0 ], [ -1, 1 ] ] ,
-            },
-            "spawn": [4, 19],
-            "offsets": this.offsets.O
-        }
+const stats_copy ={ CLEAR1:0,
+      CLEAR2:0,
+      CLEAR3:0,
+      CLEAR4:0,
+      TSMS:0,
+      TSS:0,
+      TSD:0,
+      TST:0,
+      PC:0,
+      WASTE:0,
+      ATTACK:0,
+      B2B:0,
+      COMBO:0,
+      CLEAN_RECIEVED:0,
+      MESSY_RECIEVED:0,
+    SPIKE:0,}
 
-    }
-    this.rotation = {
-      'north': {
-          '180': 'south',
-          'cw': 'east',
-          'ccw': 'west',
-      },
-      'east': {
-          '180': 'west',
-          'cw': 'south',
-          'ccw': 'north',
-      },
-      'south': {
-          '180': 'north',
-          'cw': 'west',
-          'ccw': 'east',
-      },
-      'west': {
-          '180': 'east',
-          'cw': 'north',
-          'ccw': 'south',
-      },
-    }
-    this.weights = {
-      rowTrans: -5,
-      covered: -17,
-      covered2: -1,
-      bumpiness: -24,
-      bumpiness2: -7,
-      cavities: -173,
-      cavities2: -3,
-      overhangs: -34,
-      overhangs2: -1,
-      tslot: [8, 148, 192, 407],
-      depth: 57,
-      max_well_depth: 17,
-      well: [-30, -50, 20, 50, 60, 60, 50, 20, -50, -30],
-      height:-46,
-      half:-150,
-      quarter:-511,
-      b2b:52,
-
-      clears:[0,-143,-100,-58,390],
-      b2bClear:104,
-      tspin1: 121,
-      tspin2: 410,
-      tspin3: 602,
-      miniTspin1: -158,
-      miniTspin2: -93,
-      tWaste:-152,
-      combo:150,
-    }
-    this.hdMoves = {
-      "T":[[3,0,'north'],[2,0,'north'],[1,0,'north'],[4,0,'north'],[5,0,'north'],[6,0,'north'],[7,0,'north'],[8,0,'north'],[3,1,'east'],[2,1,'east'],[1,1,'east'],[0,1,'east'],[4,1,'east'],[5,1,'east'],[6,1,'east'],[7,1,'east'],[8,1,'east'],[3,1,'west'],[2,1,'west'],[1,1,'west'],[4,1,'west'],[5,1,'west'],[6,1,'west'],[7,1,'west'],[8,1,'west'],[9,1,'west'],[3,1,'south'],[2,1,'south'],[1,1,'south'],[4,1,'south'],[5,1,'south'],[6,1,'south'],[7,1,'south'],[8,1,'south']],
-      "O":[[3,0,'north'],[2,0,'north'],[1,0,'north'],[0,0,'north'],[4,0,'north'],[5,0,'north'],[6,0,'north'],[7,0,'north'],[8,0,'north']],
-      "I":[[3,0,'north'],[2,0,'north'],[1,0,'north'],[4,0,'north'],[5,0,'north'],[6,0,'north'],[7,0,'north'],[3,2,'east'],[2,2,'east'],[1,2,'east'],[0,2,'east'],[4,2,'east'],[5,2,'east'],[6,2,'east'],[7,2,'east'],[8,2,'east'],[9,2,'east'],[3,1,'west'],[2,1,'west'],[1,1,'west'],[0,1,'west'],[4,1,'west'],[5,1,'west'],[6,1,'west'],[7,1,'west'],[8,1,'west'],[9,1,'west'],[3,0,'south'],[2,0,'south'],[4,0,'south'],[5,0,'south'],[6,0,'south'],[7,0,'south'],[8,0,'south']],
-      "L":[[3,0,'north'],[2,0,'north'],[1,0,'north'],[4,0,'north'],[5,0,'north'],[6,0,'north'],[7,0,'north'],[8,0,'north'],[3,1,'east'],[2,1,'east'],[1,1,'east'],[0,1,'east'],[4,1,'east'],[5,1,'east'],[6,1,'east'],[7,1,'east'],[8,1,'east'],[3,1,'west'],[2,1,'west'],[1,1,'west'],[4,1,'west'],[5,1,'west'],[6,1,'west'],[7,1,'west'],[8,1,'west'],[9,1,'west'],[3,1,'south'],[2,1,'south'],[1,1,'south'],[4,1,'south'],[5,1,'south'],[6,1,'south'],[7,1,'south'],[8,1,'south']],
-      "J":[[3,0,'north'],[2,0,'north'],[1,0,'north'],[4,0,'north'],[5,0,'north'],[6,0,'north'],[7,0,'north'],[8,0,'north'],[3,1,'east'],[2,1,'east'],[1,1,'east'],[0,1,'east'],[4,1,'east'],[5,1,'east'],[6,1,'east'],[7,1,'east'],[8,1,'east'],[3,1,'west'],[2,1,'west'],[1,1,'west'],[4,1,'west'],[5,1,'west'],[6,1,'west'],[7,1,'west'],[8,1,'west'],[9,1,'west'],[3,1,'south'],[2,1,'south'],[1,1,'south'],[4,1,'south'],[5,1,'south'],[6,1,'south'],[7,1,'south'],[8,1,'south']],
-      "S":[[3,0,'north'],[2,0,'north'],[1,0,'north'],[4,0,'north'],[5,0,'north'],[6,0,'north'],[7,0,'north'],[8,0,'north'],[3,1,'east'],[2,1,'east'],[1,1,'east'],[0,1,'east'],[4,1,'east'],[5,1,'east'],[6,1,'east'],[7,1,'east'],[8,1,'east'],[3,1,'west'],[2,1,'west'],[1,1,'west'],[4,1,'west'],[5,1,'west'],[6,1,'west'],[7,1,'west'],[8,1,'west'],[9,1,'west'],[3,1,'south'],[2,1,'south'],[1,1,'south'],[4,1,'south'],[5,1,'south'],[6,1,'south'],[7,1,'south'],[8,1,'south']],
-      "Z":[[3,0,'north'],[2,0,'north'],[1,0,'north'],[4,0,'north'],[5,0,'north'],[6,0,'north'],[7,0,'north'],[8,0,'north'],[3,1,'east'],[2,1,'east'],[1,1,'east'],[0,1,'east'],[4,1,'east'],[5,1,'east'],[6,1,'east'],[7,1,'east'],[8,1,'east'],[3,1,'west'],[2,1,'west'],[1,1,'west'],[4,1,'west'],[5,1,'west'],[6,1,'west'],[7,1,'west'],[8,1,'west'],[9,1,'west'],[3,1,'south'],[2,1,'south'],[1,1,'south'],[4,1,'south'],[5,1,'south'],[6,1,'south'],[7,1,'south'],[8,1,'south']],
-    }
-    let TSDR = (matrix, heights, start)=>{
-      if(heights[start+1]>heights[start+2])return false
-      if(heights[start]<heights[start+2]+1)return false
-      let match = [
-        [true,false,false],
-        [false,false,false],
-        [true,false,true],]
-      let y = heights[start+2]+1
-      if(y<2)return false
-      for(let dy = 0; dy< match.length; dy++){
-        for(let dx = 0; dx< match[0].length; dx++){
-          if(match[dy][dx]!=(!!matrix[y-dy][start+dx]))return false
-        }
-      }
-      return this.initPiece("T",start+1,y-1,"south")
-
-    }
-    let TSDL = (matrix, heights, start)=>{
-      if(heights[start+1]>heights[start])return false
-      if(heights[start+2]<heights[start]+1)return false
-      let match = [
-        [false,false,true],
-        [false,false,false],
-        [true,false,true],]
-      let y = heights[start]+1
-      if(y<2)return false
-      for(let dy = 0; dy< match.length; dy++){
-        for(let dx = 0; dx< match[0].length; dx++){
-          if(match[dy][dx]!=(!!matrix[y-dy][start+dx]))return false
-        }
-      }
-      return this.initPiece("T",start+1,y-1,"south")
-    }
-    let TSTL = (matrix, heights, start)=>{
-      if(heights[start]!=heights[start+2]-2)return false
-      if(heights[start+1]!=heights[start+2]-2)return false
-      let match = [
-        [false,false,true],
-        [false,false,false],
-        [true,true,false],
-        [true,false,false],
-        [true,null,false],
-      ]
-      let y = heights[start]+1
-      if(y<4)return false
-      if(matrix[y-1][start-1]){
-        if(!matrix[y][start-1])return false
-      }
-      for(let dy = 0; dy< match.length; dy++){
-        for(let dx = 0; dx< match[0].length; dx++){
-          if(match[dy][dx]!=null && match[dy][dx]!=(!!matrix[y-dy][start+dx]))return false
-        }
-      }
-      return this.initPiece("T",start+2,y-2,"west")
-    }
-    let TSTR = (matrix, heights, start)=>{
-      if(heights[start+2]!=heights[start]-2)return false
-      if(heights[start+1]!=heights[start]-2)return false
-      let match = [
-        [true,false,false],
-        [false,false,false],
-        [false,true,true],
-        [false,false,true],
-        [false,null,true],
-      ]
-      let y = heights[start+2]+1
-      if(y<4)return false
-      if(matrix[y-1][start+3]){
-        if(!matrix[y][start+3])return false
-      }
-      for(let dy = 0; dy< match.length; dy++){
-        for(let dx = 0; dx< match[0].length; dx++){
-          if(match[dy][dx]!=null && match[dy][dx]!=(!!matrix[y-dy][start+dx]))return false
-        }
-      }
-      return this.initPiece("T",start,y-3,"east")
-    }
-    this.TSLOTS = [TSDR,TSDL,TSTL,TSTR]
-  }
-  getHeights(board){
-    let heights = []
-    for(let x = 0; x < this.cols; x++){
-      let h = 0
-      for(; h<this.rows;h++){
-        if(board[this.rows-1-h][x])break
-      }
-      heights.push(this.rows-h)
-    }
-    return heights
-  }
-  checkTspin(matrix,piece){
-    if(piece.location.type!="T")return "none"
-    let last = piece.fbot.actions[piece.fbot.actions.length-1]
-    if(last!="cw" && last !="ccw" && last != "180")return "none"
-    let backCorners = this.shapes.T.backCorners[piece.location.orientation]
-    let frontCorners = this.shapes.T.frontCorners[piece.location.orientation]
-    let fCount =0
-    let bCount =0
-    for(let [dx,dy] of backCorners){
-      bCount+=(!!this.getBoardCell(matrix,piece.location.x+dx,piece.location.y+dy))
-    }
-    for(let [dx,dy] of frontCorners){
-      fCount+=(!!this.getBoardCell(matrix,piece.location.x+dx,piece.location.y+dy))
-    }
-    if(frontCorners + backCorners<3)return "none"
-    if(fCount<2&&piece.fbot.kick<=2)return "mini"
-    return "full"
-
-  }
-  simulateRot(matrix,move,rot){
-    let kicks = this.shapes[move.location.type].offsets[move.location.orientation][rot]
-    let r1 = this.rotation[move.location.orientation][rot]
-    for(let i =0; i < kicks.length; i++){
-      let [x,y] = kicks[i]
-      let test = this.copyMove(move)
-      test.location.x+=x
-      test.location.y+=y
-      test.location.orientation = r1
-      test.fbot.actions.push(rot)
-      if(!this.checkIntersection(matrix,test))return test
-    }
-    return false
-  }
-  simulateTrans(matrix,move,x,y,act=null){
-    move.location.x+=x
-    move.location.y+=y
-    if(act)move.fbot.actions.push(act)
-    if(this.checkIntersection(matrix,move)){return false}
-    return move
-  }
-  simulateAction(matrix, move, action){
-    let newMove = this.copyMove(move)
-    switch(action){
-      case '<':return this.simulateTrans(matrix,newMove,-1,0,action)
-      case '>':return this.simulateTrans(matrix,newMove,1,0,action)
-      case '<<':
-      case '>>':
-        let dir = 1
-        if(action=='<<')dir = -1
-        let das = this.simulateTrans(matrix,newMove,dir,0,action)
-        if(!das)return false
-        while(!this.checkIntersection(matrix,das)){
-          das.location.x+=dir
-        }
-        das.location.x-=dir
-        if(das.location.x==move.location.x)return false
-        das.fbot.actions.push(action)
-        return das
-      case 'sd':
-        let sd = this.simulateTrans(matrix,newMove,0,-1,action)
-        if(!sd)return false
-        while(!this.checkIntersection(matrix,sd)){
-          sd.location.y-=1
-        }
-        sd.location.y+=1
-        if(sd.location.y==move.location.y)return false
-        sd.fbot.actions.push("sd")
-        return sd
-      case 'ssd':
-        let ssd = this.simulateTrans(matrix,newMove,0,-1,action)
-        return ssd
-      case 'cw':
-      case 'ccw':
-      case '180':
-      return this.simulateRot(matrix,move,action)
+function TFstate(state_input){
+  state_input = copyNState(state_input)
+  let pushboard = state_input.board.slice(0,21).reverse()
+  for(let r = 0 ; r<pushboard.length;r++){
+    for(let c = 0; c < pushboard[r].length;c++){
+      if(pushboard[r][c]==null)pushboard[r][c]=0
+      else if (pushboard[r][c]=="G")pushboard[r][c]=8
+      else{pushboard[r][c]= reversePIndex[pushboard[r][c]]+1}
     }
   }
-  initPiece(type,x,y,o){
-    return{
-      location:{
-        type:type,
-        orientation:o||"north",
-        x:x||this.shapes[type].spawn[0],
-        y:y||this.shapes[type].spawn[1],
-      },
-      spin:"none",
-      fbot:{
-        score:0,
-        actions:[],
-        kick:-1,
-        attackType:this.attackType(),
-      }
-    }
-  }
-  placePiece(matrix,piece){
-    for(let [dx, dy] of this.shapes[piece.location.type].coords[piece.location.orientation]){
-      let x = piece.location.x+dx, y = piece.location.y+dy
-      if(x>=0&&x<this.cols&&y>=0 && y< this.rows){
-        matrix[y][x] = piece.location.type
-      }
-    }
-  }
-  initState(){
-    let board =Array.from({ length: this.rows }, () => Array.from({ length: this.cols }, () => null));
-    let hold = null
-    let queue = ["I","O","T","L","J","S","Z","I","O","T","L","J","S","Z","I","O","T","L","J","S","Z",]
-    let combo = 0
-    let back_to_back = false
-    return {board:board,hold:hold,combo:combo,queue:queue,back_to_back:back_to_back}
-  }
-  copyState(state){
-    let board = [];
-    for (let i = 0; i < this.rows; i++)
-      board[i] = state.board[i].slice();
-    return {board:board, hold:state.hold, combo:state.combo, back_to_back:state.back_to_back}
-  }
-
-
-  getKicks(type,rotation,spin){
-    let r0 = rotation
-    let r1 = this.rotation[rotation][spin]
-    let offsets = this.shapes[type].offsets
-    let kicks = []
-    for (let i = 0; i<offsets.north.length;i++){
-      let [x0, y0] = offsets[r0][i];
-      let [x1, y1] = offsets[r1][i];
-      kicks.push({
-          x: x0 - x1,
-          y: y0 - y1,
-          r: r1,
-      })
-    }
-    return kicks
-  }
-  checkIntersection(matrix,piece){
-    for(let [dx, dy] of this.shapes[piece.location.type].coords[piece.location.orientation]){
-      if(this.getBoardCell(matrix,piece.location.x+dx,piece.location.y+dy))return true
-    }
-    return false
-  }
-  getBoardCell(matrix,x,y){
-    if(x<0||x>=this.cols||y<0)return 'X'
-    else if(y>= this.rows)return null
-    else return matrix[y][x]
-  }
-  getMoves(state,start){
-    if(!start)return []
-    let moves = new Map()
-    let explored = new Map()
-    let branchActions = ['<','>','cw','ccw','sd','180']
-    if(start == "O")branchActions = ['<','>','sd']
-    let inverseActions = {'<':'>', '>':'<', 'ccw':'cw', 'cw':'ccw', '180':'180', 'sd':'sd'}
-    let base = []
-    start = this.initPiece(start)
-    let leftMost = this.simulateAction(state.board,start,"<")
-    if(leftMost){
-    while(!this.checkIntersection(state.board,leftMost)){
-      let p = this.simulateAction(state.board,leftMost,'sd')
-      if(!p)return []
-      let str = p.location.x + " " + p.location.y + " " + p.location.orientation
-      base.push(p)
-      explored.set(str,true)
-      moves.set(str,p)
-      leftMost.location.x-=1
-    }}
-    leftMost = this.copyMove(start)
-    while(!this.checkIntersection(state.board,leftMost)){
-      let p = this.simulateAction(state.board,leftMost,'sd')
-      if(!p)return []
-      let str = p.location.x + " " + p.location.y + " " + p.location.orientation
-      base.push(p)
-      explored.set(str,true)
-      moves.set(str,p)
-      leftMost.location.x+=1
-    }
-    let depth = 10
-    while(depth>0){
-      depth-=1
-      let push = []
-      for(let piece of base){
-        for(let action of branchActions){
-          if(inverseActions[piece.fbot.actions[piece.fbot.actions.length-1]]==action)continue
-          let newPiece = this.simulateAction(state.board,piece,action)
-          if(newPiece){
-            let str = newPiece.location.x + " " + newPiece.location.y + " " + newPiece.location.orientation
-            if(!explored.has(str)){
-              explored.set(str,true)
-              push.push(newPiece)
-              newPiece.location.y-=1
-              if(this.checkIntersection(state.board,newPiece)){
-                newPiece.location.y+=1
-                moves.set(str,newPiece)
-              }
-              else{
-                newPiece.location.y+=1
-              }
-            }
-          }
-        }
-      }
-      base = push
-      if(base.length==0)break
-    }
-    return(Array.from(moves.values()))
-  }
-
-  copyMove(move){
-    return {spin:move.spin,location:{...move.location},fbot:{score:move.fbot.score,actions:[...move.fbot.actions],kick:move.fbot.kick,attackType:{...move.fbot.attackType}}}
-  }
-  advanceState(pushState,move,depth){
-    let state = this.copyState(pushState)
-    let cleared = 0
-    let colorCleared = 0
-    let garbageCleared = 0
-    this.placePiece(state.board,move)
-    for(let y=0; y<state.board.length; y++){
-      if(!state.board[y].includes(null)){
-        if(state.board[y][0]=="G" || state.board[y][1]=="G")garbageCleared+=1
-        else{colorCleared+=1}
-        state.board.splice(y,1)
-        y--
-        cleared++
-      }
-    }
-    if(cleared>0)move.spin= this.checkTspin(state.board,move)
-    for(let i = 0; i < cleared; i++){
-      state.board.push(Array.from({ length: this.cols}, () => null))
-    }
-
-    if(state.combo>0){
-      if(cleared>0)state.combo+=1
-      else state.combo = 0
-    }
-    move.fbot.attackType.combo=state.combo
-    move.fbot.attackType.clear = cleared
-    move.fbot.attackType.g=garbageCleared
-    if(cleared>=4 || (move.spin!="none"&& cleared>0)){
-      if(state.back_to_back)move.fbot.attackType.back_to_back=true
-      state.back_to_back = true
-    }
-    if(move.location.type==state.hold){
-      state.hold = bot.queue[depth]
-    }
-    else if(move.location.type==bot.queue[depth]){
-    }
-    else if(state.hold==null && bot.queue[depth+1]==move.location.type){
-      state.hold = bot.queue[depth]
-    }
-    depth+=1
-    if(bot.queue[depth]){
-      let spawn = this.initPiece(bot.queue[depth])
-      if(this.checkIntersection(state.board,spawn)){
-        spawn.y+=1
-        if(this.checkIntersection(state.board,spawn)){
-          spawn.y+=1
-          if(this.checkIntersection(state.board,spawn)){
-            state.dead = true
-          }
-        }
-      }
-      let lowest = 0
-      for(let [dx,dy] of this.shapes[spawn.location.type].coords["north"]){
-        if(dy<lowest)lowest = dy
-      }
-      if(move.location.y+lowest>19){
-        state.dead = true
-      }
-    }
-    return state
-  }
-  tslot(board, heights, count, scores = []){
-    for(let i = 0; i < this.cols-3; i++){
-      for(let slot of this.TSLOTS){
-        let cry = slot(board,heights,i)
-        if(cry){
-          this.placePiece(board,cry)
-          let cleared = 0
-          for(let y=0; y<board.length; y++){
-            if(!board[y].includes(null)){
-              board.splice(y,1)
-              y--
-              cleared++
-            }
-          }
-          for(let i = 0; i < cleared; i++){
-            board.push(Array.from({ length: this.cols}, () => null))
-          }
-          scores.push(cleared)
-          let heights = this.getHeights(board)
-          if(count-1==0)return [board,scores,heights]
-          return this.tslot(board,heights,count-1,scores)
-        }
-      }
-    }
-    return [board,scores,heights]
-  }
-  scoreState(state, move,depth,weights){
-    let score = 0
-    let board = [];
-    for (let i = 0; i < this.rows; i++)
-      board[i] = state.board[i].slice();
-    weights = weights || this.weights
-    let tCount = 0
-    for(let i = depth; i < 5+depth; i++){
-      if(bot.queue[i]){
-        if(bot.queue[i]=="T")tCount++
-      }
-      else{
-        break
-      }
-    }
-    if(state.hold == "T")tCount++
-    let heights = this.getHeights(board)
-    if(tCount > 0){
-      let out = this.tslot(board,heights,tCount)
-      board = out[0]
-      for(let slot of out[1]){
-        score+=weights.tslot[slot]
-      }
-      heights = out[2]
-    }
-    let maxHeight = Math.max(...heights)
-    let row_transitions = 0
-    for(let y = 0; y<this.rows; y++){
-      let last = true
-      for(let i = 0; i <= this.cols; i++){
-        if(!!this.getBoardCell(board,i,y) != last){
-          row_transitions++
-          last = !!board[y][i]
-        }
-      }
-    }
-    score+=weights.rowTrans*row_transitions
-
-    let covered = 0;
-    let covered2 = 0
-    for(let x = 0; x < this.cols; x++){
-      for(let y = heights[x]-2; y>=0; y--){
-        if(!board[y][x]){
-          let cells = Math.min(6,heights[x]-y-1)
-          covered+=cells
-          covered2+=cells*cells
-        }
-      }
-    }
-    score+=weights.covered*covered+weights.covered2*covered2
-
-    let cavities = 0
-    let overhangs = 0
-      for(let y=0; y<maxHeight;y++){
-        for(let x = 0; x < this.cols; x++){
-          if(board[y][x]||y>=heights[x])continue
-          if(x>1){
-            if(heights[x-1]<=y-1&&heights[x-2]<=y){
-              overhangs+=1
-              continue
-            }
-          }
-          if(x<8){
-            if(heights[x+1]<=y-1&&heights[x+2]<=y){
-              overhangs+=1
-              continue
-            }
-          }
-          cavities+=1
-        }
-      }
-    score += cavities * weights.cavities + overhangs*weights.overhangs2
-
-    let well = 0
-    for(let x = 0; x < this.cols; x++){
-      if(heights[x]<=heights[well])well = x
-    }
-    let depth1 = 0
-    loop1:for(let y = heights[well]; y<this.rows; y++){
-      for(let x = 0; x < this.cols; x++){
-        if(x!=well && !board[y][x]){
-          break loop1
-        }
-      }
-      depth1++
-    }
-    score+=depth1*weights.depth
-    if(depth!=0 && weights.well[well])score+=weights.well[well]
-    let bumpiness = -1
-    let bumpiness2 = -1
-    let prev = 0
-    if(well==0)prev=1
-    for(let i = 1; i < 10; i ++){
-      if(i==well)continue
-      let dh = Math.abs(heights[prev]-heights[i])
-      bumpiness+=dh
-      bumpiness2+=dh*dh
-      prev=i
-    }
-    score+=weights.bumpiness*bumpiness + weights.bumpiness2*bumpiness2
-    score+=maxHeight*weights.height + Math.max(0,maxHeight-15)*weights.quarter + Math.max(0,maxHeight-10)*weights.half
-    if(state.back_to_back)score+=weights.b2b
-    if(move.location.type == "T" && move.spin != "none"){
-      switch (move.fbot.attackType.clear) {
-        case 0:
-          move.fbot.score+=weights.tWaste
-          break;
-        case 1:
-          if(move.spin=='mini')move.fbot.score+=weights.miniTspin1
-          else{move.fbot.score+=weights.tspin1}
-        case 2:
-          if(move.spin=='mini')move.fbot.score+=weights.miniTspin2
-          else{move.fbot.score+=weights.tspin2}
-        default:
-          move.fbot.score+= weights.tspin3
-      }
-      if(move.fbot.attackType.clear!=0)move.fbot.score+=weights.b2bClear
-    }
-    else{
-      move.fbot.score += weights.clears[move.fbot.attackType.clear]
-      if(move.fbot.attackType.clear>=4)move.fbot.score+=weights.b2bClear
-    }
-    move.fbot.score+=move.fbot.attackType.combo*weights.combo
-  //  move.fbot.score+=move.fbot.actions.length*(-10)
-    return score
-  }
-
-  attackType(cCleared=0,gCleared=0,b2b=false,combo=0){
-    return {clear:cCleared+gCleared,g:gCleared,back_to_back:b2b,combo:combo}
-  }
-  printBoard(board){
-      let chars = []
-      for(let i =board.length-1;i>=0;i--){
-          for(let s of board[i]){
-              if(s==null)chars.push("* ")
-              else chars.push(s+" ")
-          }
-          chars.push("\n")
-      }
-      return chars.join("")
-  }
+  let deadline = pushboard.shift()
+  let state = {matrix:pushboard,deadline:deadline, comboCounter:state_input.combo, isBack2Back:state_input.back_to_back, incomingGarbage:[], stats: {...stats_copy},queue:state_input.queue.map(x => new Block(reversePIndex[x])),currSpike:0, hold:{}}
+  if(state_input.hold)state.hold = (new Block (reversePIndex[state_input.hold]))
+  return state
 }
-let nodesCreated = 0
-class Node{
-  constructor(parent=null, move = null, state = null, value = 0){
-    this.parent = parent
-    this.state = state
-    this.move = move
-    if(this.parent){this.depth = this.parent.depth+1}
-    if(!this.depth)this.depth = 0
-    this.value = value
-    this.children = []
-    this.graveyard = [] //dead nodes
+function FTmove(ss){
+  let move = {}
+  move.type = pIndex[ss.piece.id]
+  move.orientation = rIndex[ss.r]
+  let x = jstrisToCenterX[ss.piece.id][ss.r]+ss.x
+  let y = jstrisToCenterY[ss.piece.id][ss.r]+ss.y
+  move.x = x
+  move.y = 19-y
+  return {location:move,spin:ss.spin}
+}
+function TFmove(ss){
+  let spin = ss.spin
+  let move = ss.location
+  let r = reverseRIndex[move.orientation]
+  let id = reversePIndex[move.type]
+  let x = move.x-jstrisToCenterX[id][r]
+  let y = (19-move.y)-jstrisToCenterY[id][r]
+  return {x:x, y:y, r:r, piece:new Block(id),tcheck:false, spin:spin, actions:[]}
+}
+/*
+function printBoard(board){
+    let chars = []
+    for(let b of board){
+        for(let s of b){
+            if(s==0)chars.push("* ")
+            else chars.push("O ")
+        }
+        chars.push("\n")
+    }
+    console.log(chars.join(""))
+}*/
+function copyState(push){
+  let state ={
+      matrix : push.matrix.map(function(arr){return arr.slice();}),
+      queue : [...push.queue],
+      hold:{...push.hold},
+      deadline:[...push.deadline],
+      comboCounter: push.comboCounter,
+      isBack2Back:push.isBack2Back,
+      stats:{...push.stats},
+      incomingGarbage:[...push.incomingGarbage],
+      currSpike:push.currSpike
   }
-  expand(weights = null){
-    if(!this.state)return false
-    let depth = this.depth+!!this.state.hold
-    if(!bot.queue[depth])return false
-    let moves = game.getMoves(this.state,bot.queue[depth])
-    if(this.state.hold)moves = moves.concat(game.getMoves(this.state,this.state.hold))
-    else if(bot.queue[depth+1]){
-      moves = moves.concat(game.getMoves(this.state,bot.queue[depth+1]))
-    }
-    let dead = 0
-    for(let move of moves){
-      nodesCreated+=1
-      let newState = game.advanceState(this.state,move,depth) // get next state and set the score of the move
-      if(newState.dead){
-        dead+=1
-        this.graveyard.push(new Node(this, move))
+  return state
+}
+function copyNState(push){
+  let state ={
+      board : push.board.map(function(arr){return arr.slice();}),
+      queue : [...push.queue],
+      combo: push.combo,
+      back_to_back:push.back_to_back,
+      hold: push.hold
+  }
+  return state
+}
+function columnHeight(grid,col){
+    let r = 0
+    for(; r<grid.length && grid[r][col]==0;r++);
+    return grid.length-r;
+}
+function Game(){
+  this.blockSets = getBlockSets()
+  this.comboAttack = [0,0,1,1,1,2,2,3,3,4,4,4,5]
+  this.linesAttack = [0, 0, 1, 2, 4, 4, 6, 2, 0, 10, 1]
+  let tsdRIGHT = function(matrix, start){
+      if(start+1>9)return false
+      let h1 = columnHeight(matrix,start)
+      let h2 = columnHeight(matrix,start+1)
+      let h3 = columnHeight(matrix,start+2)
+      if(!(h1>=h3+2))return false
+      if(!(h3>=h2+1))return false
+      let match = [[1,2,2],
+                  [0,2,2],
+                  [1,2,2]]
+      let init_y = 20-h3-2
+      for(let y = 0; y<3; y++){
+          let y1 = init_y+y
+          for(let x = 0; x<3; x++){
+              let x1 = start+x
+              if(match[y][x]>0!=matrix[y1][x1]>0 && match[y][x]!=2)return false
+          }
       }
-      else{
-        let value = game.scoreState(newState,move,this.depth,weights) //get the score of the board
-        let child = new Node(this, move, newState, value)
-        this.children.push(child)
+      return {x:start, y:init_y-1, r:2, piece:new Block(2), tcheck:true}
+  }
+  let tsdLEFT = function(matrix, start){
+      if(start+1>9)return false
+      let h3 = columnHeight(matrix,start)
+      let h2 = columnHeight(matrix,start+1)
+      let h1 = columnHeight(matrix,start+2)
+      if(!(h1>=h3+2))return false
+      if(!(h3>=h2+1))return false
+      let match = [[2,2,1],
+                  [2,2,0],
+                  [2,2,1]]
+      let init_y = 20-h3-2
+      for(let y = 0; y<3; y++){
+          let y1 = init_y+y
+          for(let x = 0; x<3; x++){
+              let x1 = start+x
+              if(match[y][x]>0!=matrix[y1][x1]>0 && match[y][x]!=2)return false
+          }
       }
-    }
+      return {x:start, y:init_y-1, r:2, piece: new Block(2),tcheck:true}
+  }
+  let tstLEFT = function(matrix, start){
+      if(start+2>9)return false
+      let h1 = columnHeight(matrix,start)
+      let h2 = columnHeight(matrix,start+1)
+      let h3 = columnHeight(matrix,start+2)
+      if(!(h1==h2))return false
+      if(!(h3>=h2+2))return false
+      if(!(h3>=5))return false
+      let match = [[2,2,1],
+                  [2,2,0],
+                  [2,2,0],
+                  [2,0,0],
+                  [2,2,0]]
 
-    if(this.children.length>0){
-    //  this.state = null //this node is no longer a leaf node, we don't need its state using up space
+      let init_y = 20-h3
+      if(matrix[init_y][start-1]!=matrix[init_y+1][start-1])return false
+      for(let y = 0; y<3; y++){
+          let y1 = init_y+y
+          for(let x = 0; x<3; x++){
+              let x1 = start+x
+              if(match[y][x]>0!=matrix[y1][x1]>0 && match[y][x]!=2)return false
+          }
+      }
+      return {x:start+1, y:init_y+1, r:3, piece: new Block(2),tcheck:true}
+  }
+  let tstRIGHT = function(matrix, start){
+      if(start+2>9)return false
+      let h3 = columnHeight(matrix,start)
+      let h2 = columnHeight(matrix,start+1)
+      let h1 = columnHeight(matrix,start+2)
+      if(!(h3>=5))return false
+      if(!(h1==h2))return false
+      if(!(h3>=h2+2))return false
+      let match = [[1,2,2],
+                  [0,2,2],
+                  [0,2,2],
+                  [0,0,2],
+                  [0,2,2]]
+
+      let init_y = 20-h3
+      if(matrix[init_y][start+3]!=matrix[init_y+1][start+3])return false
+      for(let y = 0; y<3; y++){
+          let y1 = init_y+y
+          for(let x = 0; x<3; x++){
+              let x1 = start+x
+              if(match[y][x]>0!=matrix[y1][x1]>0 && match[y][x]!=2)return false
+          }
+      }
+      return {x:start-1, y:init_y+1, r:1,piece: new Block(2),tcheck:true}
+  }
+  this.TSLOTS = [tsdRIGHT, tsdLEFT,tstLEFT,tstRIGHT]
+}
+function objCopy(_0xa670xb) {
+      if(null == _0xa670xb || 'object' !== typeof _0xa670xb) {
+          return _0xa670xb
+      };
+      var _0xa670x1d = {};
+      for(var _0xa670x1e in _0xa670xb) {
+          if(_0xa670xb['hasOwnProperty'](_0xa670x1e)) {
+              _0xa670x1d[_0xa670x1e] = _0xa670xb[_0xa670x1e]
+          }
+      };
+      return _0xa670x1d
+  }
+function Block(_0xa670x35, moves=0) {
+  this.counter = moves
+      this['id'] = _0xa670x35;
+      this['set'] = 0;
+      this['pos'] = {
+          x: 3,
+          y: 0
+      };
+      this['rot'] = 0;
+      this['item'] = 0
+  }
+function BlockSet() {
+      this['blocks'] = {};
+      this['step'] = 1;
+      this['scale'] = 1;
+      this['items'] = false;
+      this['previewAs'] = null;
+      this['equidist'] = true;
+      this['allspin'] = null
+  }
+function getBlockSets() {
+      let _blockSets = null;
+      if(_blockSets !== null) {
+          return _blockSets
+      };
+      var _0xa670x51 = new BlockSet();
+      _0xa670x51['items'] = true;
+      var _0xa670x52 = [{
+          '-1': [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, -2],
+              [1, -2]
+          ],
+          '1': [
+              [0, 0],
+              [-1, 0],
+              [-1, 1],
+              [0, -2],
+              [-1, -2]
+          ],
+          '2': [
+              [0, 0],
+              [0, 1]
+          ]
+      }, {
+          '-1': [
+              [0, 0],
+              [1, 0],
+              [1, -1],
+              [0, 2],
+              [1, 2]
+          ],
+          '1': [
+              [0, 0],
+              [1, 0],
+              [1, -1],
+              [0, 2],
+              [1, 2]
+          ],
+          '2': [
+              [0, 0],
+              [1, 0]
+          ]
+      }, {
+          '-1': [
+              [0, 0],
+              [-1, 0],
+              [-1, 1],
+              [0, -2],
+              [-1, -2]
+          ],
+          '1': [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, -2],
+              [1, -2]
+          ],
+          '2': [
+              [0, 0],
+              [0, -1]
+          ]
+      }, {
+          '-1': [
+              [0, 0],
+              [-1, 0],
+              [-1, -1],
+              [0, 2],
+              [-1, 2]
+          ],
+          '1': [
+              [0, 0],
+              [-1, 0],
+              [-1, -1],
+              [0, 2],
+              [-1, 2]
+          ],
+          '2': [
+              [0, 0],
+              [-1, 0]
+          ]
+      }];
+      var _0xa670x53 = [{
+          '-1': [
+              [0, 0],
+              [-1, 0],
+              [2, 0],
+              [-1, +2],
+              [2, -1]
+          ],
+          '1': [
+              [0, 0],
+              [-2, 0],
+              [1, 0],
+              [-2, -1],
+              [1, 2]
+          ],
+          '2': [
+              [0, 0],
+              [0, 1]
+          ]
+      }, {
+          '-1': [
+              [0, 0],
+              [2, 0],
+              [-1, 0],
+              [2, 1],
+              [-1, -2]
+          ],
+          '1': [
+              [0, 0],
+              [-1, 0],
+              [2, 0],
+              [-1, 2],
+              [2, -1]
+          ],
+          '2': [
+              [0, 0],
+              [1, 0]
+          ]
+      }, {
+          '-1': [
+              [0, 0],
+              [1, 0],
+              [-2, 0],
+              [1, -2],
+              [-2, 1]
+          ],
+          '1': [
+              [0, 0],
+              [2, 0],
+              [-1, 0],
+              [2, 1],
+              [-1, -2]
+          ],
+          '2': [
+              [0, 0],
+              [0, -1]
+          ]
+      }, {
+          '-1': [
+              [0, 0],
+              [-2, 0],
+              [1, 0],
+              [-2, -1],
+              [1, 2]
+          ],
+          '1': [
+              [0, 0],
+              [1, 0],
+              [-2, 0],
+              [1, -2],
+              [-2, 1]
+          ],
+          '2': [
+              [0, 0],
+              [-1, 0]
+          ]
+      }];
+      var _0xa670x54 = [{
+          '-1': [
+              [0, 0]
+          ],
+          '1': [
+              [0, 0]
+          ],
+          '2': [
+              [0, 0]
+          ]
+      }, {
+          '-1': [
+              [0, 0]
+          ],
+          '1': [
+              [0, 0]
+          ],
+          '2': [
+              [0, 0]
+          ]
+      }, {
+          '-1': [
+              [0, 0]
+          ],
+          '1': [
+              [0, 0]
+          ],
+          '2': [
+              [0, 0]
+          ]
+      }, {
+          '-1': [
+              [0, 0]
+          ],
+          '1': [
+              [0, 0]
+          ],
+          '2': [
+              [0, 0]
+          ]
+      }];
+      _0xa670x51['blocks'] = [{
+          id: 0,
+          name: 'I',
+          color: 5,
+          blocks: [
+              [
+                  [0, 0, 0, 0],
+                  [1, 2, 3, 4],
+                  [0, 0, 0, 0],
+                  [0, 0, 0, 0]
+              ],
+              [
+                  [0, 0, 1, 0],
+                  [0, 0, 2, 0],
+                  [0, 0, 3, 0],
+                  [0, 0, 4, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 0, 0, 0],
+                  [4, 3, 2, 1],
+                  [0, 0, 0, 0]
+              ],
+              [
+                  [0, 4, 0, 0],
+                  [0, 3, 0, 0],
+                  [0, 2, 0, 0],
+                  [0, 1, 0, 0]
+              ]
+          ],
+          cc: [0, 2, 0, 1],
+          yp: [1, 1],
+          spawn: [3, -1],
+          kicks: _0xa670x53,
+          h: [1, 4, 1, 4]
+      }, {
+          id: 1,
+          name: 'O',
+          color: 3,
+          blocks: [
+              [
+                  [0, 0, 0, 0],
+                  [0, 1, 2, 0],
+                  [0, 3, 4, 0],
+                  [0, 0, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 3, 1, 0],
+                  [0, 4, 2, 0],
+                  [0, 0, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 4, 3, 0],
+                  [0, 2, 1, 0],
+                  [0, 0, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 2, 4, 0],
+                  [0, 1, 3, 0],
+                  [0, 0, 0, 0]
+              ]
+          ],
+          cc: [1, 1, 1, 1],
+          yp: [1, 2],
+          spawn: [3, -2],
+          kicks: _0xa670x54,
+          h: [2, 2, 2, 2]
+      }, {
+          id: 2,
+          name: 'T',
+          color: 7,
+          blocks: [
+              [
+                  [0, 0, 0, 0],
+                  [0, 1, 0, 0],
+                  [2, 3, 4, 0],
+                  [0, 0, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 2, 0, 0],
+                  [0, 3, 1, 0],
+                  [0, 4, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 0, 0, 0],
+                  [4, 3, 2, 0],
+                  [0, 1, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 4, 0, 0],
+                  [1, 3, 0, 0],
+                  [0, 2, 0, 0]
+              ]
+          ],
+          cc: [0, 1, 0, 0],
+          yp: [1, 2],
+          spawn: [3, -2],
+          kicks: _0xa670x52,
+          h: [2, 3, 3, 3]
+      }, {
+          id: 3,
+          name: 'L',
+          color: 2,
+          blocks: [
+              [
+                  [0, 0, 0, 0],
+                  [0, 0, 1, 0],
+                  [2, 3, 4, 0],
+                  [0, 0, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 2, 0, 0],
+                  [0, 3, 0, 0],
+                  [0, 4, 1, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 0, 0, 0],
+                  [4, 3, 2, 0],
+                  [1, 0, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [1, 4, 0, 0],
+                  [0, 3, 0, 0],
+                  [0, 2, 0, 0]
+              ]
+          ],
+          cc: [0, 1, 0, 0],
+          yp: [1, 2],
+          spawn: [3, -2],
+          kicks: _0xa670x52,
+          h: [2, 3, 2, 3]
+      }, {
+          id: 4,
+          name: 'J',
+          color: 6,
+          blocks: [
+              [
+                  [0, 0, 0, 0],
+                  [1, 0, 0, 0],
+                  [2, 3, 4, 0],
+                  [0, 0, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 2, 1, 0],
+                  [0, 3, 0, 0],
+                  [0, 4, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 0, 0, 0],
+                  [4, 3, 2, 0],
+                  [0, 0, 1, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 4, 0, 0],
+                  [0, 3, 0, 0],
+                  [1, 2, 0, 0]
+              ]
+          ],
+          cc: [0, 1, 0, 0],
+          yp: [1, 2],
+          spawn: [3, -2],
+          kicks: _0xa670x52,
+          h: [2, 3, 2, 3]
+      }, {
+          id: 5,
+          name: 'S',
+          color: 4,
+          blocks: [
+              [
+                  [0, 0, 0, 0],
+                  [0, 1, 2, 0],
+                  [3, 4, 0, 0],
+                  [0, 0, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 3, 0, 0],
+                  [0, 4, 1, 0],
+                  [0, 0, 2, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 0, 0, 0],
+                  [0, 4, 3, 0],
+                  [2, 1, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [2, 0, 0, 0],
+                  [1, 4, 0, 0],
+                  [0, 3, 0, 0]
+              ]
+          ],
+          cc: [0, 1, 0, 0],
+          yp: [1, 2],
+          spawn: [3, -2],
+          kicks: _0xa670x52,
+          h: [2, 3, 2, 3]
+      }, {
+          id: 6,
+          name: 'Z',
+          color: 1,
+          blocks: [
+              [
+                  [0, 0, 0, 0],
+                  [1, 2, 0, 0],
+                  [0, 3, 4, 0],
+                  [0, 0, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 0, 1, 0],
+                  [0, 3, 2, 0],
+                  [0, 4, 0, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 0, 0, 0],
+                  [4, 3, 0, 0],
+                  [0, 2, 1, 0]
+              ],
+              [
+                  [0, 0, 0, 0],
+                  [0, 4, 0, 0],
+                  [2, 3, 0, 0],
+                  [1, 0, 0, 0]
+              ]
+          ],
+          cc: [0, 1, 0, 0],
+          yp: [1, 2],
+          spawn: [3, -2],
+          kicks: _0xa670x52,
+          h: [2, 3, 2, 3]
+      }];
+      _0xa670x51['allspin'] = [
+          [
+              [
+                  [-1, 1, 4, 1],
+                  [
+                      [1, 0, 2, 0],
+                      [1, 2, 2, 2]
+                  ]
+              ],
+              [
+                  [2, -1, 2, 4],
+                  [
+                      [1, 1, 1, 2],
+                      [3, 1, 3, 2]
+                  ]
+              ],
+              [
+                  [-1, 2, 4, 2],
+                  [
+                      [1, 1, 2, 1],
+                      [1, 3, 2, 3]
+                  ]
+              ],
+              [
+                  [1, -1, 1, 4],
+                  [
+                      [0, 1, 0, 2],
+                      [2, 1, 2, 2]
+                  ]
+              ]
+          ], null, null, [
+              [
+                  [0, 3, 2, 3],
+                  [0, 1, 1, 1]
+              ],
+              [
+                  [0, 1, 0, 3],
+                  [2, 1, 2, 2]
+              ],
+              [
+                  [0, 1, 2, 1],
+                  [1, 3, 2, 3]
+              ],
+              [
+                  [2, 1, 2, 3],
+                  [0, 2, 0, 3]
+              ]
+          ],
+          [
+              [
+                  [0, 3, 2, 3],
+                  [1, 1, 2, 1]
+              ],
+              [
+                  [0, 1, 0, 3],
+                  [2, 2, 2, 3]
+              ],
+              [
+                  [0, 1, 2, 1],
+                  [0, 3, 1, 3]
+              ],
+              [
+                  [2, 1, 2, 3],
+                  [0, 1, 0, 2]
+              ]
+          ],
+          [
+              [
+                  [3, 1, -1, 2],
+                  [0, 1, 2, 2]
+              ],
+              [
+                  [1, 0, 2, 4],
+                  [2, 1, 1, 3]
+              ],
+              [
+                  [3, 2, -1, 3],
+                  [0, 2, 2, 3]
+              ],
+              [
+                  [0, 0, 1, 4],
+                  [1, 1, 0, 3]
+              ]
+          ],
+          [
+              [
+                  [-1, 1, 3, 2],
+                  [0, 2, 2, 1]
+              ],
+              [
+                  [2, 0, 1, 4],
+                  [1, 1, 2, 3]
+              ],
+              [
+                  [-1, 2, 3, 3],
+                  [2, 2, 0, 3]
+              ],
+              [
+                  [-1, 2, 0, 4],
+                  [0, 1, 1, 3]
+              ]
+          ]
+      ];
+      _blockSets = [_0xa670x51];
+      return _blockSets
+  }
+Game.prototype.ai_legalMoves = function(matrix, piece){
+    let explored = new Map()
+    const baseState = {x:piece.pos.x, y:piece.pos.y, r:piece.rot, actions:[], piece:{...piece},tcheck:false}
+    for(let i = 0; i < 4; i++){
+      let state = baseState
+      if(i == 1)state = this.ai_simulateAction(state,'cw',matrix,piece,true)
+      else if (i==2)state = this.ai_simulateAction(state,'180',matrix,piece,true)
+      else if (i==3)state = state = this.ai_simulateAction(state,'ccw',matrix,piece,true)
+      let copystate = {x:state.x, y:state.y, r:state.r, actions:[...state.actions], piece:state.piece,tcheck:state.tcheck}
+      let input10 = this.ai_simulateAction(state,'sd',matrix,piece,true)
+      explored.set(""+ input10.x+ " " + input10.y + " "+input10.r,input10)
+      for(let offset = 0; offset < 10; offset++){
+        let cx = state.x
+        state = this.ai_simulateAction(state,'>',matrix,piece,true)
+        if(cx == state.x)break
+        let input1 = this.ai_simulateAction(state,'sd',matrix,piece,true)
+        explored.set(""+ input1.x+ " " + input1.y + " "+input1.r,input1)
+      }
+        state = copystate
+      for(let offset = 0; offset < 10; offset++){
+        let cx = state.x
+        state = this.ai_simulateAction(state,'<',matrix,piece,true)
+        if(cx == state.x)break
+        let input1 = this.ai_simulateAction(state,'sd',matrix,piece,true)
+        explored.set(""+ input1.x+ " " + input1.y + " "+input1.r,input1)
+      }
+    }
+    let newSet = [...explored.values()]
+    for(let t = 0; t < 5; t++){
+      if(newSet.length==0)break
+      let addSet = []
+      for(let state of newSet){
+        let tryStates = []
+        tryStates.push(this.ai_simulateAction(state,'<',matrix,piece,true))
+        tryStates.push(this.ai_simulateAction(state,'>',matrix,piece,true))
+        tryStates.push(this.ai_simulateAction(state,'sd',matrix,piece,true))
+        tryStates.push(this.ai_simulateAction(state,'180',matrix,piece,true))
+        tryStates.push(this.ai_simulateAction(state,'cw',matrix,piece,true))
+        tryStates.push(this.ai_simulateAction(state,'ccw',matrix,piece,true))
+        for(let tryState of tryStates){
+          if(!this.ai_checkIntersection(tryState.x, tryState.y+1, tryState.r, matrix, piece)){
+            tryState = this.ai_simulateAction(tryState, 'sd', matrix, piece,true)
+          }
+          if(!explored.has(""+ tryState.x+ " " + tryState.y + " "+tryState.r)){
+            explored.set(""+ tryState.x+ " " + tryState.y + " "+tryState.r,tryState)
+            addSet.push(tryState)
+          }
+          else if((explored.get(""+ tryState.x+ " " + tryState.y + " "+tryState.r).tcheck==false && tryState.tcheck) || (explored.get(""+ tryState.x+ " " + tryState.y + " "+tryState.r).actions.lenth>tryState.actions.length)){
+            explored.set(""+ tryState.x+ " " + tryState.y + " "+tryState.r,tryState)
+            addSet.push(tryState)
+          }
+        }
+      }
+      newSet = addSet
+    }
+    return(Array.from(explored.values()))
+  }
+Game.prototype.ai_simRotate = function(state_input, r, matrix, activeBlock) {
+      var state = this.ai_copyMove(state_input)
+      let rString = (r === -1) ? '-1' : ((r === 1) ? '1' : '2'),
+          newRot = (state.r + r + 4)%4;
+      let block = this.blockSets[activeBlock.set].blocks[activeBlock.id],
+          kicks = block.kicks[state.r][rString],
+          kickLength = kicks.length;
+      for (let i = 0; i < kickLength; i++) {
+          let xOffset = kicks[i][0],
+              yOffset = kicks[i][1];
+          if (!this.ai_checkIntersection(state.x + xOffset, state.y - yOffset, newRot, matrix, activeBlock)) {
+              state.x += xOffset;
+              state.y -= yOffset;
+              state.r = newRot;
+              state.tcheck = true
+              return state;
+          }
+      };
+      return state
+  };
+Game.prototype.ai_copyMove = function(state_input){
+  return {x:state_input.x, y:state_input.y, r:state_input.r, actions:[...state_input.actions], piece:state_input.piece,tcheck:state_input.tcheck}
+}
+Game.prototype.ai_simulateAction = function(state_input, action, matrix, piece,cbool) {
+      var state = this.ai_copyMove(state_input)
+      if(cbool){
+        state.actions.push(action)
+      }
+      if (action == '<<') {
+          for (let shift = 1; shift < 15; shift++) {
+              if (this.ai_checkIntersection(state.x-shift, state.y, state.r, matrix, piece)) {
+                  state.x -= shift - 1;
+                  if(shift !=1)state.tcheck=false
+                  return state;
+              }
+          }
+      }
+      else if (action == '>>') {
+          for (let shift = 1; shift < 15; shift++) {
+              if (this.ai_checkIntersection(state.x+shift, state.y, state.r, matrix, piece)) {
+                  state.x += shift - 1;
+                  if(shift !=1)state.tcheck=false
+                  return state;
+              }
+          }
+      }
+      else if (action == '<') {
+          if (!this.ai_checkIntersection(state.x-1, state.y, state.r, matrix, piece)) {
+              state.x--;
+              state.tcheck=false
+              return state;
+          }
+          else {return state;}
+      }
+      else if (action == '>') {
+          if (!this.ai_checkIntersection(state.x+1, state.y, state.r, matrix, piece)) {
+              state.x++;
+              state.tcheck=false
+              return state;
+          }
+          else {return state;}
+      }
+      else if (action == 'cw') {
+          return this.ai_simRotate(state, 1, matrix, piece);
+      }
+      else if (action == 'ccw') {
+          return this.ai_simRotate(state, -1, matrix, piece);
+      }
+      else if (action == '180') {
+          return this.ai_simRotate(state, 2, matrix, piece);
+      }
+      else if (action == 'sd') {
+          for (let sd = 1; sd < 40; sd++) {
+              if (this.ai_checkIntersection(state.x, state.y+sd, state.r, matrix, piece)) {
+                  state.y = state.y + sd - 1;
+                  if(sd!=1)state.tcheck=false
+                  return state;
+              }
+          }
+      }
+  };
+
+Game.prototype.ai_checkIntersection = function(_v6b, _v6c, _vf0, matrix, piece) {
+_vf0 = (_vf0 === null) ? piece.rot : _vf0;
+let _v34 = this.blockSets[piece.set],
+    _v35 = _v34.blocks[piece.id].blocks,
+    _v36 = _v34.blocks[piece.id].blocks[_vf0].length;
+for (var _v18 = 0; _v18 < _v36; _v18++) {
+    for (var _v19 = 0; _v19 < _v36; _v19++) {
+        if (_v35[_vf0][_v18][_v19] > 0) {
+            if ((_v6c + _v18) >= 20) {
+                return true
+            };
+            if ((_v6b + _v19) < 0 || (_v6b + _v19) >= 10) {
+                return true
+            };
+            if ((_v6c + _v18) >= 0 && matrix[_v6c + _v18][_v6b + _v19] > 0) {
+                return true
+            }
+        }
+    }
+};
+return false
+};
+
+Game.prototype.ai_checkClears = function(matrix, deadline){
+  let blocks_line = 0
+  for(let w = 0; w < 10; w++){
+    if(deadline[w]!=0)blocks_line++
+    else{
+      if(blocks_line>0)break
+    }
+  }
+  if(blocks_line==10){
+    return true
+  }
+  for(let h = 0; h<20; h++){
+    blocks_line=0
+    for(let w = 0; w < 10; w++){
+      let id = matrix[h][w]
+      if(id==9)break
+      else{
+        if(id!=0){
+          blocks_line++
+        }
+      }
+    }
+    if(blocks_line==10){
       return true
     }
-    else{
-      return false
-    }
   }
-  backprop(){
-    this.children.sort((a,b)=> (a.value < b.value)?1:-1)
-    this.value = this.children[0].value+this.children[0].move.fbot.score
-  //  this.value = this.value * botSettings.pathWeight + (1-botSettings.pathWeight)*(this.children[0].value + this.children[0].move.fbot.score) //we care about the board in the middle of the path, if we got a bad board in the middle the greater the chance we get killed by a unpredicted spike
-    if(this.parent){this.parent.backprop()}
+  return false
+}
+Game.prototype.ai_createMove = function(matrix, deadline, start, end){
+  let moves = [{x:start.pos.x,y:start.pos.y,r:start.rot, actions:[],piece:start, tcheck:false}]
+  let explored = [""+start.pos.x+" "+start.pos.y+" "+start.rot]
+  const branch_moves = ['<','>','cw','ccw','sd','<<','>>','180']
+  const weights = {'<':-1, '>':-1, 'cw':-1, 'ccw':-1, 'sd':-1, '<<':-2, '>>':-2,'180':-0.5}
+  let depth = 20
+  let bestScore = -Infinity
+  let bestMove = null
+  let spinNes = false
+  if(this.blockSets[end.piece.set].blocks[end.piece.id].name=='T' && end.tcheck){
+    let bpush = this.ai_placeBlock(end.x, end.y, end.r, matrix, deadline, end.piece)
+    spinNes = this.ai_checkClears(bpush.matrix, bpush.deadline)
   }
-  //not sure which selectChild is the best will test out
-  selectChild(){
-    //assume that children are already sorted
-    let n = this.children.length
-    let weights = []
-    let sum = 0
-    for(let i = 0; i<n; i++){
-      sum+=1/((i+1)**2)
-      weights[i]=1/((i+1)**2)
-    }
-    let index = 0
-    let r = Math.random()*sum
-    for(let j = 0; j<weights.length; j++){
-      r-=weights[j]
-      if(r<0){
-        index = j
-        j = weights.length
+  while (depth-->0){
+    let push=[]
+    for(let move of moves){
+      for(let step of branch_moves){
+        let next = this.ai_simulateAction(move,step,matrix,start,true)
+        if(!explored.includes(""+next.x+" "+next.y+ " "+next.r)){
+
+          if(next.x==end.x && next.y == end.y && next.r ==end.r){
+            if((spinNes && next.tcheck) || !spinNes){
+              let score = 0
+              let flipped = false
+              for(let act of next.actions){
+                if(weights[act]!=undefined)score += weights[act]
+                if(flipped || act == 'sd'){
+                  flipped = true
+                  score-=2
+                }
+              }
+              if(score > bestScore){
+                bestScore = score
+                bestMove = next
+              }
+            }
+          }
+          else{
+            explored.push(""+next.x+" "+next.y+ " "+next.r)
+            push.push(next)
+          }
         }
       }
-    return this.children[index]
-  }
-  selectChild2(){
-    //assume that children are already sorted
-    let sum = this.children.reduce((a,b)=>a+(b.value||0),0)
-    let r = Math.random()*sum
-    for(let j =0; j<this.children.length;j++){
-      r-=this.children[j].value
-      if(r<0)return this.children[j]
     }
-    return this.children[0]
+    moves = push
+    if(moves.length==0)break
   }
-  rollout(){
-
-    if(this.children.length==0){//leaf node
-      if(this.expand()){this.backprop()}
-    }
-    else{
-      this.selectChild().rollout()
-    }
-  }
+  return bestMove
 }
+Game.prototype.ai_placeBlock = function(px, py, r, matrix, deadline, piece) {
+  matrix = matrix.map(function(arr){return arr.slice();})
+  deadline = [...deadline]
+    let kv2 = 0,
+        kv1 = 0,
+        blocks = this['blockSets'][piece['set']]['blocks'][piece['id']],
+        blocks_len = blocks['blocks'][r]['length']
 
-let game = new Game()
-class Thinker{
-  constructor(){
-    this.calculating = true
-    this.iters = 0
-    this.maxIters = 3000
+    for (var r1 = 0; r1 < blocks_len; r1++) {
+        for (var r2 = 0; r2 < blocks_len; r2++) {
+            let bval = blocks['blocks'][r][r1][r2];
+            if (bval > 0) {
+                ++kv1;
+                if ((py + r1) >= 0 && (px + r2) >= 0) {
+                    matrix[py + r1][px + r2] = blocks['color']
+                } else {
+                    kv2++;
+                    if ((py + r1) === (-1)) {
+                        if (deadline[px + r2] === 0) {
+                            deadline[px + r2] = blocks['color']
+                        }
+                    }
+                }
+            }
+        }
+    };
+    let kill = false
+    if (kv2 === kv1) {
+        kill = true
+    };
+    return{matrix:matrix,deadline:deadline,kill:kill}
   }
-  async run(){
-    this.iters=0
-    do{
-      this.iters+=1
-      bot.root.rollout()
-      if(this.iters%50==0){
-        await waitNextTask()
+Game.prototype.ai_nextState = function(push,move) {
+  let state = copyState(push)
+  let bpush = this.ai_placeBlock(move.x,move.y,move.r,state.matrix,state.deadline, move.piece)
+  state.matrix = bpush.matrix
+  state.deadline = bpush.deadline
+  if(bpush.kill)state.dead = true
+  let cleared_lines = 0
+  let blocks_line = 0
+  let sum_blocks = 0
+  let spinMiniPossible = false
+  let spinPossible = false
+  let clear_score_type = ''
+  if(this.blockSets[move.piece.set].blocks[move.piece.id].name=='T'){
+    let res = this.ai_checkTSpin(state,move)
+    spinMiniPossible=res.spinMiniPossible
+    spinPossible=res.spinPossible
+  }
+  for(let w = 0; w < 10; w++){
+    if(state.deadline[w]!=0)blocks_line++
+    else{
+      if(blocks_line>0)break
+    }
+  }
+  if(blocks_line==10){
+    state.deadline=[0,0,0,0,0,0,0,0,0,0]
+    blocks_line++
+  }
+  else sum_blocks+=blocks_line
+  for(let h = 0; h<20; h++){
+    blocks_line=0
+    for(let w = 0; w < 10; w++){
+      let id = state.matrix[h][w]
+      if(id==9)break
+      else{
+        if(id!=0){
+          blocks_line++
+        }
+        else{
+          if(sum_blocks+blocks_line>0)break
+        }
       }
     }
-    while(this.iters<this.maxIters && this.calculating)
+    if(blocks_line==10){
+      for(let i = h; i>0; i--)state.matrix[i]=state.matrix[i-1]
+      state.matrix[0]=state.deadline.slice()
+      state.deadline = [0,0,0,0,0,0,0,0,0,0]
+      blocks_line=0
+      cleared_lines++
+    }
+    sum_blocks+=blocks_line
+  }
+  let attack = 0
+  if(cleared_lines>0){
+    switch (cleared_lines) {
+      case 1:
+        attack = this.linesAttack[1]
+        if(spinPossible){
+          clear_score_type='TSS'
+          attack = this.linesAttack[7]
+          if(state.isBack2Back){
+            state.stats.B2B++
+            attack += this.linesAttack[10]
+          }
+          else state.isBack2Back = true
+          state.stats.TSS++
+        }
+        else{
+          if(spinMiniPossible){
+            clear_score_type='TSMS'
+            if(state.isBack2Back)state.stats.B2B++
+            else state.isBack2Back=true
+            attack = this.linesAttack[8]
+            state.stats.TSMS++
+          }
+          else{
+            state.isBack2Back = false
+            clear_score_type='CLEAR1'
+            state.stats.CLEAR1++
+          }
+        }
+        break;
+      case 2:
+        attack = this.linesAttack[2]
+        if(spinPossible||spinMiniPossible){
+          state.stats.TSD++
+          attack = this.linesAttack[5]
+          clear_score_type='TSD'
+          if(state.isBack2Back){
+            state.stats.B2B++
+            attack+=this.linesAttack[10]
+          }
+          else state.isBack2Back=true
+        }
+        else{
+          state.isBack2Back=false
+          clear_score_type='CLEAR2'
+          state.stats.CLEAR2++
+        }
+        break;
+      case 3:
+        attack = this.linesAttack[3]
+        if(spinPossible||spinMiniPossible){
+          attack = this.linesAttack[6]
+          clear_score_type='TST'
+          if(state.isBack2Back){
+            state.stats.B2B++
+            attack+=this.linesAttack[10]
+          }
+          else state.isBack2Back = true
+          state.stats.TST++
+        }
+        else{
+          state.isBack2Back=false
+          clear_score_type= 'CLEAR3'
+          state.stats.CLEAR3++
+        }
+        break;
+      case 4:
+      default:
+        state.stats.CLEAR4++
+        clear_score_type='CLEAR4'
+        attack = this.linesAttack[4]
+        if(state.isBack2Back){
+          state.stats.B2B++
+          attack += this.linesAttack[10]
+        }
+        else{
+          state.isBack2Back=true
+        }
+        break;
+    }
+    if(sum_blocks==0 && state.stats.CLEAN_RECIEVED+state.stats.MESSY_RECIEVED<=0){
+      state.stats.PC++
+      attack = this.linesAttack[9]
+      clear_score_type='PC'
+    }
+    state.comboCounter++
+    let comboAttack = (state.comboCounter <= 12) ? this.comboAttack[state.comboCounter] : this.comboAttack[this.comboAttack.length - 1]
+    state.stats.COMBO+=comboAttack
+    attack += comboAttack
+    if(attack>0){
+      for(let i = 0; i < state.incomingGarbage.length; i++){
+        if(state.incomingGarbage[i]==0){
+          break
+        }
+        attack -= state.incomingGarbage[i]
+        if(attack>0)state.incomingGarbage[i]= 0
+        else{
+          state.incomingGarbage[i]=-attack
+          attack = 0
+          break
+        }
+      }
+      while(state.incomingGarbage[0]==0)state.incomingGarbage.shift()
+    }
+    else{
+      if(state.incomingGarbage.length > 0){
+        if(state.incomingGarbage[0]==0)state.incomingGarbage.shift()
+        else if(state.incomingGarbage[1]>0){
+          state.incomingGarbage[1]=state.incomingGarbage[0]
+          state.incomingGarbage.shift()
+        }
+      }
+    }
+  }
+  else{
+    state.comboCounter=-1
+    while(state.incomingGarbage.length>0){
+      if(state.incomingGarbage[0]==0){
+        state.incomingGarbage.shift()
+        break
+      }
+      this.ai_addGarbage(state,state.incomingGarbage[0])
+      if(state.incomingGarbage<4){state.stats.MESSY_RECIEVED+=state.incomingGarbage[0]}
+      else state.stats.CLEAN_RECIEVED+=state.incomingGarbage[0]
+      state.incomingGarbage.shift()
+    }
+  }
+  if(clear_score_type=='TSMS' || (cleared_lines<=0 && move.piece.id==2))state.stats.WASTE++
+  state.stats.ATTACK+=attack
+  if(state.currSpike>=0){
+    if(attack > 0){
+      state.currSpike += attack
+      state.stats.SPIKE = Math.max(state.currSpike,state.stats.SPIKE)
+    }
+    else state.currSpike *= -1
+  }
+  else if (state.currSpike <0 ){
+    if(attack >0)state.currSpike = state.currSpike*-0.7 + attack
+    else state.currSpike = 0
+  }
+  state.action = clear_score_type
+  if(move.piece.id == state.queue[0].id){
+    state.queue.shift()
+  }
+  else if (move.piece.id == state.hold.id){
+    state.hold = state.queue.shift()
+  }
+  else if(move.piece.id == state.queue[1].id){
+    state.hold = state.queue.shift()
+    state.queue.shift()
+  }
+  let active = state.queue[0]
+  if(active){
+  let bset = this.blockSets[active.set].blocks[active.id]
+  active.pos.x =bset.spawn[0]
+  active.pos.y = bset.spawn[1]
+  if (active.set === 0) {
+      let offset = bset.blocks[0][-active.pos.y];
+      if ((state.matrix[0][3] && offset[0]) || (state.matrix[0][4] && offset[1]) || (state.matrix[0][5] && offset[2]) || (state.matrix[0][6] && offset[3])) {
+          active.pos.y--
+      }
+  } else {
+      while (this.ai_checkIntersection(active.pos.x, active.pos.y, active.rot, state.matrix, state.deadline)) {
+          active.pos.y--
+      }
+  };
+  let rlen = bset.blocks[0].length
+  var ky = -(1 + active.pos.y);
+  if (ky >= 0 && ky < rlen) {
+      for (var i = 0; i < rlen; ++i) {
+          if (bset.blocks[active.rot][ky][i] && state.deadline[active.pos.x + i]) {
+            state.dead = true
+              break
+          }
+      }
+  }}
+  return state
+}
+
+Game.prototype.ai_fireAction = function(action, time=undefined) {
+        time = time || this.timestamp();
+        if (action == '<<') {
+            this.activateDAS(-1, time);
+            this.ARRon[-1] = false;
+        }
+        else if (action == '>>') {
+            this.activateDAS(1, time);
+            this.ARRon[1] = false;
+        }
+        else if (action == '<') {
+            let timestamp = time;
+            this.moveCurrentBlock(-1, false, timestamp);
+            this.pressedDir['-1'] = timestamp;
+            this.Replay.add(new ReplayAction(this.Replay.Action.MOVE_LEFT, this.pressedDir['-1']));
+        }
+        else if (action == '>') {
+            let timestamp = time;
+            this.moveCurrentBlock(1, false, timestamp);
+            this.pressedDir['1'] = timestamp;
+            this.Replay.add(new ReplayAction(this.Replay.Action.MOVE_RIGHT, this.pressedDir['1']));
+        }
+        else if (action == 'hold') {
+            this.holdBlock();
+        }
+        else if (action == 'cw') {
+            this.rotateCurrentBlock(1);
+            this.Replay.add(new ReplayAction(this.Replay.Action.ROTATE_RIGHT, time));
+        }
+        else if (action == 'ccw') {
+            this.rotateCurrentBlock(-1);
+            this.Replay.add(new ReplayAction(this.Replay.Action.ROTATE_LEFT, time));
+        }
+        else if (action == '180') {
+            this.rotateCurrentBlock(2);
+            this.Replay.add(new ReplayAction(this.Replay.Action.ROTATE_180, time));
+        }
+        else if (action == 'hd') {
+            this.hardDrop(time);
+        }
+        else if (action == 'sd') {
+            this.softDropSet(true, time);
+            this.update(0, time);
+            this.softDropSet(false, time);
+        }
+    }
+Game.prototype.ai_checkTSpin = function(state,move) {
+    if(!move.tcheck==true)return {spinPossible:false,spinMiniPossible: false}
+    let check1 = 0,
+        check2 = 0,
+        r = move.r,
+        x = move.x,
+        y = move.y;
+    if (y < -2) {
+        return false
+    };
+    switch (r) {
+        case 0:
+            if (y >= -1) {
+                check1 = (state.matrix[y + 1][x] > 0) + (state.matrix[y + 1][x + 2] > 0)
+            } else {
+                if (y === -2) {
+                    check1 = (state.deadline[x] > 0) + (state.deadline[x + 2] > 0)
+                }
+            };
+            if (y === 17) {
+                check2 = 2
+            } else {
+                check2 = (state.matrix[y + 3][x] > 0) + (state.matrix[y + 3][x + 2] > 0)
+            };
+            break;
+        case 1:
+            if (x === -1) {
+                check2 = 2
+            };
+            if (y >= -1) {
+                check1 = (state.matrix[y + 1][x + 2] > 0) + (state.matrix[y + 3][x + 2] > 0);
+                if (!check2) {
+                    check2 = (state.matrix[y + 1][x] > 0) + (state.matrix[y + 3][x] > 0)
+                }
+            } else {
+                if (y === -2) {
+                    check1 = (state.deadline[x + 2] > 0) + (state.matrix[y + 3][x + 2] > 0);
+                    if (!check2) {
+                        check2 = (state.deadline[x] > 0) + (state.matrix[y + 3][x] > 0)
+                    }
+                }
+            };
+            break;
+        case 2:
+            if (y >= -1) {
+                check2 = (state.matrix[y + 1][x] > 0) + (state.matrix[y + 1][x + 2] > 0)
+            } else {
+                if (y === -2) {
+                    check2 = (state.deadline[x] > 0) + (state.deadline[x + 2] > 0)
+                }
+            };
+            if (y === 17) {
+                check1 = 2
+            } else {
+                check1 = (state.matrix[y + 3][x] > 0) + (state.matrix[y + 3][x + 2] > 0)
+            };
+            break;
+        case 3:
+            if (x === 8) {
+                check2 = 2
+            };
+            if (y >= -1) {
+                check1 = (state.matrix[y + 1][x] > 0) + (state.matrix[y + 3][x] > 0);
+                if (!check2) {
+                    check2 = (state.matrix[y + 1][x + 2] > 0) + (state.matrix[y + 3][x + 2] > 0)
+                }
+            } else {
+                if (y === -2) {
+                    check1 = (state.deadline[x] > 0) + (state.matrix[y + 3][x] > 0);
+                    if (!check2) {
+                        check2 = (state.deadline[x + 2] > 0) + (state.matrix[y + 3][x + 2] > 0)
+                    }
+                }
+            };
+            break
+    };
+    return {spinPossible:(check1 === 2 && check2 >= 1),spinMiniPossible: (check1 === 1 && check2 === 2)}
+};
+Game.prototype.matchTspin = function(state){
+  let lastmove = {tslot:-1}
+  let bestState = null
+  for(let slot of this.TSLOTS){
+    for(let x = 0; x<7; x++){
+      let move = slot(state.matrix,x)
+      if(move==false)continue
+      let newState = this.ai_nextState(state,move)
+      if(newState.action=='TSS')move.tslot= 1
+      else if(newState.action=='TSD')move.tslot= 2
+      else if(newState.action=='TST')move.tslot= 3
+      else move.tslot=0
+      if(move.tslot>lastmove.tslot){
+        lastmove=move
+        bestState = newState
+        bestState.tslot=move.tslot
+      }
+    }
+  }
+  return bestState
+}
+Game.prototype.ai_addGarbage= function(state,_0x44dcx77) {
+  if(_0x44dcx77<=0)return
+  let _0x44dcx78 = [9, 9, 9, 9, 9, 9, 9, 9, 9, 9];
+  if (_0x44dcx77 <= state.matrix.length) {
+    state.deadline = state.matrix[_0x44dcx77 - 1].slice(0)
+  } else {
+    state.deadline = _0x44dcx78.slice(0)
+  };
+  let _0x44dcx79 = state.matrix.length
+  for (let r1 = 0; r1 < _0x44dcx79; r1++) {
+    if ((_0x44dcx79 - r1) > _0x44dcx77) {
+      state.matrix[r1] = state.matrix[r1 + _0x44dcx77].slice(0)
+    } else {
+      state.matrix[r1] = _0x44dcx78.slice(0)
+    }
+  };
+};
+Game.prototype.getValue = function(state,move, standard){
+    let score = 0
+    let matrix = state.matrix
+    let ts = 0;
+    let s_len = Math.min(7,state.queue.length)
+    for(let i =0; i < s_len; i++){
+      if(this.blockSets[state.queue[i].set].blocks[state.queue[i].id].name=='T'){
+        ts++
+      }
+    }
+    ts = Math.min(ts,3)
+    let newState = copyState(state)
+    for(let t = 0; t < ts; t++){
+      newState = this.matchTspin(newState)
+      if(newState==null)break
+      matrix = newState.matrix
+      score+=standard.tslot[newState.tslot]
+    }
+  let heights = []
+  for(let i = 0; i < matrix[0].length; i++){
+    heights.push(columnHeight(matrix,i))
+  }
+      let maxHeight = Math.max(...heights)
+  score+=standard.top_quarter * Math.max(maxHeight-15,0)
+  score+=standard.top_half * Math.max(maxHeight-10,0)
+  score += standard.height * maxHeight
+  let row_trans=0
+  for(let row of matrix){
+      let last = true
+      for(let i = 0; i <= row.length; i++){
+          if(row[i]!=0 != last){
+              row_trans++
+              last = row[i]!=0
+          }
+      }
+  }
+    score += standard.row_transitions*row_trans
+
+
+  let covered = 0
+  for(let x = 0; x<10; x++){
+      for(let y = heights[x]-2; y>=0; y--){
+          if(matrix[19-y][x]==0){
+              let cells = Math.min(6, heights[x]-y-1)
+              covered+=cells
+          }
+      }
+  }
+
+    score +=standard.covered_cells * covered + covered*covered*standard.covered_cells_sq
+
+
+      let cavities = 0, overhangs = 0
+      for(let y = 19; y>19-maxHeight; y--){
+          for(let x = 0; x<10; x++){
+              let y1 = 19-y
+              if(matrix[y][x]!=0 || y1>=heights[x])continue
+              if(x>1){
+                  if(heights[x-1]<=y1-1&&heights[x-2]<=y1){
+                      overhangs+=1
+                      continue
+                  }
+              }
+              if(x<8){
+                  if(heights[x+1]<=y1-1&&heights[x+2]<=y1){
+                      overhangs+=1
+                      continue
+                  }
+              }
+              cavities+=1
+          }
+      }
+
+    score += standard.overhang_cells * overhangs + standard.overhang_cells_sq *overhangs * overhangs
+    score += standard.cavity_cells * cavities + standard.cavity_cells_sq * cavities * cavities
+
+
+
+  let well = 0
+  for(let i = 1; i<matrix[0].length; i++){
+      if(heights[i]<=heights[well])well=i
+  }
+  score+=state.stats.CLEAN_RECIEVED*standard.tank[0]+state.stats.MESSY_RECIEVED*standard.tank[1]
+  let depth = 0
+  for(let y = 19-heights[well]; y>=0; y--){
+      let check = false
+      for(let x = 0; x<10; x++){
+          if(x!=well && matrix[y][x]==0){
+              check = true
+          }
+      }
+      if(check)break
+      else depth++
+  }
+  score += standard.well_depth * Math.min(depth,standard.max_well_depth)
+    if(depth>0){
+      score += standard.well_column[well]
+    }
+    if(state.isBack2Back)score += standard.back_to_back
+
+    let bumpiness = -1
+    let bumpiness_sq = -1
+    let prev = 1
+    if(well!=0)prev = 0
+    for(let i = 0; i < 10; i++){
+        if(i==well)continue
+        let dh = Math.abs(heights[prev]-heights[i])
+        bumpiness+=dh
+        bumpiness_sq+=dh*dh
+        prev = i
+    }
+    score += standard.bumpiness * bumpiness + standard.bumpiness_sq * bumpiness*bumpiness
+    score+=standard.clear1*state.stats.CLEAR1
+    score+=standard.clear2*state.stats.CLEAR2
+    score+=standard.clear3*state.stats.CLEAR3
+    score+=standard.clear4*state.stats.CLEAR4
+    score+=standard.mini_tspin1*state.stats.TSMS
+    score+=standard.tspin1*state.stats.TSS
+    score+=standard.tspin2*state.stats.TSD
+    score+=standard.tspin3*state.stats.TST
+    score+=standard.perfect_clear*state.stats.PC
+    score+=standard.wasted_t*state.stats.WASTE
+    score+=standard.b2b_clear*state.stats.B2B
+    score+=standard.combo_garbage*state.stats.COMBO
+    if(state.stats.SPIKE>7)score+=standard.spike*state.stats.SPIKE
+  return score
+}
+let game = new Game()
+class Node{
+  constructor(parent=null, state=null, move=null, value = 0){
+    this.parent = parent
+    this.children = []
+    this.orphans = []
+    this.move = move
+    this.state = state
+    this.value = value
+    this.dead = false
   }
 }
 class Bot{
   constructor(){
-    this.root = null
-    this.thinker = null
-    this.queue = null
-  }
-  loadState(state){
-    this.root = null
-    this.queue = state.queue
+    this.settings = {
+        weights:{
+            back_to_back: 52,
+            bumpiness: -24,
+            bumpiness_sq:-7,
+            row_transitions:-5,
+            height:-39,
+            top_half:-150,
+            top_quarter:-511,
+            cavity_cells:-173,
+            cavity_cells_sq:-3,
+            overhang_cells:-34,
+            overhang_cells_sq: -1,
+            covered_cells: -17,
+            covered_cells_sq: -1,
+            tslot: [8, 148, 192, 407],
+            well_depth: 57,
+            max_well_depth: 17,
+            well_column: [-30, -50, 20, 50, 60, 60, 50, 20, -50, -30],
 
-    game.rows = state.board.length
-    game.cols = state.board[0].length
-    this.root = new Node(null,null,state)
-    if(state.hold){
-      this.root.depth-=1
+            wasted_t: -152,
+            b2b_clear: 104,
+            clear1: -143,
+            clear2: -100,
+            clear3: -58,
+            clear4: 390,
+            tspin1: 121,
+            tspin2: 410,
+            tspin3: 602,
+            mini_tspin1: -158,
+            mini_tspin2: -93,
+            perfect_clear: 999,
+            combo_garbage: 200,
+            tank:[17,4],
+            spike:115,
+        },
+        useHold:true,
+        botIters:10000,
+        cheesyCutoff:-1000,
     }
-    this.root.rollout()
-//    console.log(this.queue)
-  //  console.log(this.root.state.hold)
-  //  game.printBoard(state.board)
+    this.state = null
+    this.root = null
+    this.iters = 0
+    this.calculating=false
+    this.macroCutoff = 0
+    this.counter = 0
+    this.pushQueue = []
   }
-  think(){
-    if(this.thinker){
-      this.stopThink()
-    }
-    this.thinker = new Thinker()
-    this.thinker.run()
-  }
-  stopThink(){
-    if(this.thinker)this.thinker.calculating = false
-  }
-  newPiece(piece){
-    this.queue.push(piece)
-  }
+  loadWeights(arr){
+  this.settings.weights = {
+                back_to_back: arr[0],
+                bumpiness: arr[1],
+                bumpiness_sq:arr[2],
+                row_transitions:arr[3],
+                height:arr[4],
+                top_half:arr[5],
+                top_quarter:arr[6],
+                cavity_cells:arr[7],
+                cavity_cells_sq:arr[8],
+                overhang_cells:arr[9],
+                overhang_cells_sq:arr[10],
+                covered_cells:arr[11],
+                covered_cells_sq:arr[12],
+                tslot: [arr[13], arr[14], arr[15], arr[16]],
+                well_depth: arr[17],
+                max_well_depth: arr[18],
+                well_column: [arr[19], arr[20], arr[21], arr[22], arr[23], arr[24], arr[25], arr[26], arr[27], arr[28]],
 
+                wasted_t: arr[29],
+                b2b_clear: arr[30],
+                clear1: arr[31],
+                clear2: arr[32],
+                clear3: arr[33],
+                clear4: arr[34],
+                tspin1: arr[35],
+                tspin2: arr[36],
+                tspin3: arr[37],
+                mini_tspin1: arr[38],
+                mini_tspin2: arr[39],
+                perfect_clear: arr[40],
+                combo_garbage: arr[41],
+                tank:[arr[42],arr[43]],
+                spike:arr[44],
+            }
+  }
+  loadState(state,flipped = false){
+    this.counter = 0
+    this.pushQueue = []
+    if(flipped)this.state=copyState(state)
+    else this.state = TFstate(state)
+    this.root = new Node(null, copyState(this.state))
+    this.expandNode(this.root)
+    this.backprop(this.root)
+  }
+  async think(){
+    if(this.state == null || !this.calculating)return
+    this.iters = 0
+    while(this.iters<this.settings.botIters){
+      if(this.iters %50==0)await new Promise(resolve => setTimeout(resolve,0));
+      if(!this.calculating){
+        return
+      }
+      this.iters++
+      let selectedNode = this.selectNode(this.root)
+      this.expandNode(selectedNode)
+      this.backprop(selectedNode)
+    }
+  }
+  macro(opp){
+    this.settings.weights = {back_to_back: 52,
+    bumpiness: -24,
+    bumpiness_sq:-7,
+    row_transitions:-5,
+    height:-39,
+    top_half:-150,
+    top_quarter:-511,
+    cavity_cells:-173,
+    cavity_cells_sq:-3,
+    overhang_cells:-34,
+    overhang_cells_sq: -1,
+    covered_cells: -17,
+    covered_cells_sq: -1,
+    tslot: [8, 148, 192, 407],
+    well_depth: 57,
+    max_well_depth: 17,
+    well_column: [-30, -50, 20, 50, 60, 60, 50, 20, -50, -30],
+
+    wasted_t: -152,
+    b2b_clear: 104,
+    clear1: -143,
+    clear2: -100,
+    clear3: -58,
+    clear4: 390,
+    tspin1: 121,
+    tspin2: 410,
+    tspin3: 602,
+    mini_tspin1: -158,
+    mini_tspin2: -93,
+    perfect_clear: 999,
+    combo_garbage: 200,
+    tank:[17,4],
+    spike:115,}
+    if(!opp)return
+    this.loadState(opp,true)
+    console.log(this.root)
+    if(this.root.value>this.settings.macroCutoff){
+      console.log("cheesy")
+      this.settings.weights = {back_to_back: 52,
+      bumpiness: -24,
+      bumpiness_sq:-7,
+      row_transitions:-5,
+      height:-39,
+      top_half:-150,
+      top_quarter:-511,
+      cavity_cells:-173,
+      cavity_cells_sq:-3,
+      overhang_cells:-34,
+      overhang_cells_sq: -1,
+      covered_cells: -17,
+      covered_cells_sq: -1,
+      tslot: [8, 148, 192, -10],
+      well_depth: 57,
+      max_well_depth: 17,
+      well_column: [-30, -50, 20, 50, 60, 60, 50, 20, -50, -30],
+
+      wasted_t: -152,
+      b2b_clear: 104,
+      clear1: -143,
+      clear2: 70,
+      clear3: 150,
+      clear4: -10,
+      tspin1: 300,
+      tspin2: -20,
+      tspin3: -30,
+      mini_tspin1: -158,
+      mini_tspin2: -93,
+      perfect_clear: 999,
+      combo_garbage: 400,
+      tank:[17,4],
+      spike:200,}
+    }
+  }
+  getMoves(flipped = false){
+    this.root.children = this.root.children.concat(this.root.orphans)
+    if(flipped)return this.root.children.map(x=>x.move)
+    return this.root.children.map(x=>FTmove(x.move))
+  }
   processMove(move){
-    if(!move)return
-    for(let i = 0; i < this.root.children.length; i++){
-      let check = this.root.children[i].move//check if we have move in tree, we should
-      if(move.location.orientation == check.location.orientation && move.location.type == check.location.type && move.location.x == check.location.x && move.location.y == check.location.y){//spin doesnt matter, we get max possible spins anyway
-        this.root = this.root.children[i]
-        this.root.parent = null //patricide the old tree
-        this.root.rollout()
-    //    game.printBoard(this.root.state.board)
+    if(usingTBP)move = TFmove(move)
+    for(let child of this.root.children){
+      if(child.move.x == move.x && child.move.y == move.y && child.move.r == move.r && child.move.piece.id == move.piece.id){
+        this.root = child
+        this.root.parent = null
         return
       }
     }
-    //cant find dupe move? shouldnt happen but just in case we load new state
+    let state = game.ai_nextState(this.state,move)
+    this.loadState(state,true)
+  }
+  addPieceToQueue(piece){
+    this.counter+=1
+    let block = piece
+    if(typeof(block)=="string")block = new Block(reversePIndex[piece])
+    block.counter = this.counter
+    this.pushQueue.push(block)
+  }
+  expandNode(node){
+    let state = node.state
+    if(state.queue.length==0){
+      return
+    }
+    let moves = game.ai_legalMoves(state.matrix, state.queue[0])
+    if(this.settings.useHold){
+      if(state.hold.id==undefined){
+        if(state.queue.length>=2)moves = moves.concat(game.ai_legalMoves(state.matrix, state.queue[1]))
+      }
+      else{
+        moves = moves.concat(game.ai_legalMoves(state.matrix, state.hold))
+      }
+    }
+    for(let move of moves){
+      let newState = game.ai_nextState(state,move)
+      let counter = newState.queue[newState.queue.length-1].counter
+      if(!counter)counter = 0
+      newState.queue = newState.queue.concat(this.pushQueue.slice(counter))
+      let child = new Node(node,newState,move,game.getValue(newState,move,this.settings.weights))
+      node.children.push(child)
+    }
+  }
+  selectNode(root){
+    while(root.children.length>0){
+      let n = root.children.length
+      let weights = []
+      let sum = 0
+      for(let i = 0; i<n; i++){
+        sum+=1/((i+1)**2)
+        weights[i]=1/((i+1)**2)
+      }
+      let index = 0
+      let r = Math.random()*sum
+      for(let j = 0; j<weights.length; j++){
+        r-=weights[j]
+        if(r<0){
+          index = j
+          j = weights.length
+        }
+      }
+      root = root.children[index]
+    }
+    return root
+  }
+  backprop(node){
+    while(node!=null){
+      if(node.children.length>0){
+        if(node.parent == null)node.children.sort((a,b)=> (a.value < b.value)?1:-1)
+        else node.children.sort((a,b)=> (a.value< b.value)?1:-1)
+        node.value = node.children[0].value
+      }
+      node = node.parent
+    }
+
+  }
+  frontprop(root, depth){
+      let node = root
+      let goal = root.goal
+      let path = []
+      while(node!=null && depth>0){
+          depth--
+          if(node.children.length==0)break
+          else node = node.children[0]
+          path.push(node.move)
+      }
+      return path
   }
 }
-
 
 let bot = new Bot()
-
-function waitNextTask() {
-  return new Promise( (resolve) => {
-    const channel = waitNextTask.channel || new MessageChannel();
-    channel.port1.addEventListener("message", (evt) => resolve(), { once: true });
-    channel.port2.postMessage("");
-    channel.port1.start();
-  });
-}
-
-
-function post(msg){
-  postMessage(msg)
-//  parentPort.postMessage(msg)
-}
-onmessage = function(e){
-  let data = e.data
-  switch(data.type){
-    case "rules":
-      post({type:"ready"})
-      break
-    case "start":
-      let state = {hold:data.hold, queue:data.queue, combo:data.combo, back_to_back:data.back_to_back, board:data.board}
-      bot.loadState(state)
-      bot.think()
-      break
-    case "play":
-      bot.processMove(data.move)
-      bot.think()
-      break
-    case "suggest":
-      if(bot.root.children.length==0){
-        console.log("forceRolling")
-        bot.root.rollout()
-        console.log(bot.root)
-      }
-      console.log(bot.root)
-      post({
-        type:"suggestion",
-        moves:bot.root.children.map(x=>x.move),
-        move_info:{
-          iters:bot.thinker.iters
+let state = {
+    "matrix": [
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0,
+            8,
+            8,
+            8
+        ],
+        [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0,
+            8,
+            8
+        ],
+        [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0,
+            8
+        ],
+        [
+            8,
+            8,
+            8,
+            0,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8
+        ],
+        [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0
+        ],
+        [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0,
+            8
+        ],
+        [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0,
+            8,
+            8
+        ],
+        [
+            8,
+            8,
+            8,
+            0,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8
+        ],
+        [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0,
+            8,
+            8
+        ]
+    ],
+    "queue": [
+        {
+            "id": 0,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": -1
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 1,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 6,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 4,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 5,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 3,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 2,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 1,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 4,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 0,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 6,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 2,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 3,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 5,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 2,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 3,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 0,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 4,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 5,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 6,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
+        },
+        {
+            "id": 1,
+            "set": 0,
+            "pos": {
+                "x": 3,
+                "y": 0
+            },
+            "rot": 0,
+            "item": 0
         }
-      })
-      break
-    case "new_piece":
-      bot.newPiece(data.piece)
-      break
-    case "stop": case "quit":
-      bot.stopThink()
-      break
-
-  }
+    ],
+    "linesCleared": 0,
+    "deadline": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ],
+    "comboCounter": -1,
+    "isBack2Back": false,
+    "hold": null,
+    "stats": {
+        "CLEAR1": 0,
+        "CLEAR2": 0,
+        "CLEAR3": 0,
+        "CLEAR4": 0,
+        "TSMS": 0,
+        "TSS": 0,
+        "TSD": 0,
+        "TST": 0,
+        "PC": 0,
+        "WASTE": 0,
+        "ATTACK": 0,
+        "B2B": 0,
+        "COMBO": 0,
+        "CLEAN_RECIEVED": 0,
+        "MESSY_RECIEVED": 0,
+        "SPIKE": 0
+    },
+    "incomingGarbage": []
 }
-//parentPort.on("message",message=>{
-//  onmessage({data:message})
-//})
+const {
+  performance
+} = require('perf_hooks');
+bot.loadState(state,true)
+for(let i = 0 ; i < 100; i ++){
+  let t1 = performance.now()
+  let selectedNode = bot.selectNode(bot.root)
+  bot.expandNode(selectedNode)
+  bot.backprop(selectedNode)
+  console.log(performance.now()-t1)
+}
 
-post({
-  type: "info",
-  name: "FreyCat",
-  author: "CatBot",
-  version: "0.0",
-  features: [],
-});
+//function postMessage(e){console.log(e)}
+const usingTBP = true
+
+onmessage = function(e) {
+	let m = e.data;
+	switch (m.type) {
+		case "rules":
+			// Currently, this message is empty, and will be extended later.
+			// The bot must respond with either the ready message, if the bot can play with those rules, or error if it cannot.
+			postMessage({
+				type: "ready"
+			});
+			break;
+		case "start":
+			bot.calculating=false
+			// The start message tells the bot to begin calculating from the specified position.
+      let state=m.state
+      if(usingTBP){
+        state = {hold:m.hold, queue:m.queue,combo:m.combo,back_to_back:m.back_to_back,board:m.board}
+      }
+    //  bot.settings.macroCutoff=m.macroCutoff
+  //    bot.macro(m.oppState)
+      bot.loadState(state,!usingTBP)
+
+      bot.calculating=true
+			bot.think()
+			break;
+		case "suggest":
+			bot.calculating=false
+			// The suggest message tells the bot to suggest some next moves in order of preference.
+			postMessage({
+				type: "suggestion",
+				moves: bot.getMoves(!usingTBP),
+        move_info: {rollouts:bot.iters+1}
+			});
+			break;
+		case "play":
+			// Tells the bot to advance its game state as if the specified move was played and begin calculating from that position
+      bot.calculating=false
+			bot.processMove(m.move);
+      bot.calculating=true
+      bot.think()
+			break;
+		case "new_piece":
+			// The new_piece message informs the bot that a new piece has been added to the queue.
+			bot.addPieceToQueue(m.piece);
+			break;
+		case "stop":
+			// The stop message tells the bot to stop calculating.
+			bot.calculating=false
+			break;
+		case "quit":
+			// The quit message tells the bot to exit.
+			bot.calculating=false
+			break;
+	}
+}
+
+function start() {
+	postMessage({
+		type: "info",
+		name: "freybot",
+		author: "freyhoe",
+		version: "0.0",
+		features: ["uses hold", "uses previews", "uses spins", "uses cat power"],
+	});
+};
+start();
