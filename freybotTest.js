@@ -437,58 +437,6 @@ class Game{
       }
       return this.initPiece("T",start,y-3,"east")
     }
-
-    let JSDR = (matrix, heights, start)=>{
-
-    }
-    let JSDL = (matrix, heights, start)=>{
-
-    }
-    let JSTL = (matrix, heights, start)=>{
-
-    }
-    let JSTR = (matrix, heights, start)=>{
-
-    }
-
-    let LSDR = (matrix, heights, start)=>{
-
-    }
-    let LSDL = (matrix, heights, start)=>{
-
-    }
-    let LSTL = (matrix, heights, start)=>{
-
-    }
-    let LSTR = (matrix, heights, start)=>{
-
-    }
-
-    let SSDR = (matrix, heights, start)=>{
-
-    }
-    let SSDL = (matrix, heights, start)=>{
-
-    }
-    let SSTL = (matrix, heights, start)=>{
-
-    }
-    let SSTR = (matrix, heights, start)=>{
-
-    }
-
-    let ZSDR = (matrix, heights, start)=>{
-
-    }
-    let ZSDL = (matrix, heights, start)=>{
-
-    }
-    let ZSTL = (matrix, heights, start)=>{
-
-    }
-    let ZSTR = (matrix, heights, start)=>{
-    }
-
     this.TSLOTS = [TSDR,TSDL,TSTL,TSTR]
   }
   getHeights(board){
@@ -921,7 +869,7 @@ class Game{
       if(move.fbot.attackType.clear>=4)move.fbot.score+=weights.b2bClear
     }
     move.fbot.score+=move.fbot.attackType.combo*weights.combo
-    move.fbot.score+=move.fbot.actions.length*(-10)
+  //  move.fbot.score+=move.fbot.actions.length*(-10)
     return score
   }
 
@@ -977,7 +925,7 @@ class Node{
     }
 
     if(this.children.length>0){
-    //  this.state = null //this node is no longer a leaf node, we don't need its state using up space
+      this.state = null //this node is no longer a leaf node, we don't need its state using up space
       return true
     }
     else{
