@@ -37,7 +37,7 @@ function TFstate(state_input){
   if(state_input.hold)state.hold = (new Block (reversePIndex[state_input.hold]))
   return state
 }
-function FTmove(ss){
+function FTmove(ss,action){
   let move = {}
   move.type = pIndex[ss.piece.id]
   move.orientation = rIndex[ss.r]
@@ -45,7 +45,10 @@ function FTmove(ss){
   let y = jstrisToCenterY[ss.piece.id][ss.r]+ss.y
   move.x = x
   move.y = 19-y
-  return {location:move,spin:ss.spin}
+  let spin = "none"
+  if(action=="TSD" || action == "TST" || action == "TSS")spin = "full"
+  if(action=="TSMS")spin == "mini"
+  return {location:move,spin:spin}
 }
 function TFmove(ss){
   let spin = ss.spin
@@ -1595,7 +1598,7 @@ class Bot{
   getMoves(flipped = false){
     this.root.children = this.root.children.concat(this.root.orphans)
     if(flipped)return this.root.children.map(x=>x.move)
-    return this.root.children.map(x=>FTmove(x.move))
+    return this.root.children.map(x=>FTmove(x.move,x.state.action))
   }
   processMove(move){
     move = TFmove(move)
