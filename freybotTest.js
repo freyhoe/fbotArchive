@@ -2351,17 +2351,7 @@ let state = {
     },
     "incomingGarbage": []
 }
-const {
-  performance
-} = require('perf_hooks');
-bot.loadState(state,true)
-for(let i = 0 ; i < 100; i ++){
-  let t1 = performance.now()
-  let selectedNode = bot.selectNode(bot.root)
-  bot.expandNode(selectedNode)
-  bot.backprop(selectedNode)
-  console.log(performance.now()-t1)
-}
+
 
 //function postMessage(e){console.log(e)}
 const usingTBP = true
