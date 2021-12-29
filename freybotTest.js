@@ -1809,7 +1809,7 @@ class Bot{
     let counter = state.queue[state.queue.length-1].counter
     for(let move of moves){
       let newState = game.ai_nextState(state,move)
-      if(counter<pushQueue.length){
+      if(counter<this.pushQueue.length){
         console.log(newState.queue)
         console.log(this.pushQueue)
       }
