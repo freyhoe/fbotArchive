@@ -1887,6 +1887,7 @@ onmessage = function(e) {
       bot.loadState(state,!usingTBP)
 
       bot.calculating=true
+      console.log(bot.root)
 			bot.think()
 			break;
 		case "suggest":
